@@ -55,7 +55,7 @@ namespace CosmeticStore.MVC.Controllers
         {
             // Tìm user trong DB
             var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.Email == email && u.PasswordHash == password);
+        .FirstOrDefaultAsync(u => u.Email == email && u.PasswordHash == password);
 
             if (user == null)
             {
@@ -63,42 +63,58 @@ namespace CosmeticStore.MVC.Controllers
                 return View();
             }
 
-            // Tạo thông tin định danh (Claims)
+            // 2. Tạo Claims để đăng nhập
             var claims = new List<Claim>
             {
-                new Claim(ClaimTypes.Name, user.FullName ?? user.Email), // Lưu tên
-                new Claim(ClaimTypes.Email, user.Email),                 // Lưu email
-                new Claim("UserId", user.UserId.ToString()),             // QUAN TRỌNG: Lưu ID để dùng khi thanh toán
-                new Claim(ClaimTypes.Role, user.Role)                    // Lưu quyền (Admin/Customer)
+                new Claim(ClaimTypes.Name, user.FullName ?? user.Email),
+                new Claim(ClaimTypes.Email, user.Email),
+                new Claim("UserId", user.UserId.ToString()), // Lưu UserID để dùng sau này
+                new Claim(ClaimTypes.Role, user.Role)
             };
 
             var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
             var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
 
-            // Ghi Cookie (Đăng nhập thành công)
             await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, claimsPrincipal);
-            // --- ĐOẠN CODE MỚI: CHUYỂN GIỎ HÀNG TỪ SESSION VÀO DB ---
+
             var sessionCart = HttpContext.Session.Get<List<CartItem>>("Cart");
+
             if (sessionCart != null && sessionCart.Count > 0)
             {
+                // Duyệt qua từng món trong Session để chuyển vào Database của User này
                 foreach (var item in sessionCart)
                 {
-                    var dbItem = await _context.Carts.FirstOrDefaultAsync(c => c.UserId == user.UserId && c.ProductId == item.ProductId);
+                    // Kiểm tra xem món này đã có trong DB của user chưa
+                    var dbItem = await _context.Carts
+                        .FirstOrDefaultAsync(c => c.UserId == user.UserId && c.ProductId == item.ProductId);
+
                     if (dbItem != null)
                     {
-                        dbItem.Quantity += item.Quantity; // Nếu đã có thì cộng dồn
+                        // Nếu có rồi: Cộng dồn số lượng
+                        dbItem.Quantity += item.Quantity;
                     }
                     else
                     {
-                        _context.Carts.Add(new Cart { UserId = user.UserId, ProductId = item.ProductId, Quantity = item.Quantity, CreatedDate = DateTime.Now });
+                        // Nếu chưa có: Tạo mới
+                        var newCart = new Cart
+                        {
+                            UserId = user.UserId,
+                            ProductId = item.ProductId,
+                            Quantity = item.Quantity,
+                            CreatedDate = DateTime.Now
+                        };
+                        _context.Carts.Add(newCart);
                     }
                 }
+
+                // Lưu thay đổi vào SQL Server
                 await _context.SaveChangesAsync();
 
-                // Xóa Session sau khi đã chuyển xong
+                // Xóa giỏ hàng trong Session đi (vì đã chuyển hết vào DB rồi)
                 HttpContext.Session.Remove("Cart");
             }
-            // --------------------------------------------------------
+            // ============================================================
+
             return Redirect(returnUrl);
         }
 
