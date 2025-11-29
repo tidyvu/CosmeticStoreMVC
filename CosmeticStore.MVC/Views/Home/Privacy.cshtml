@@ -1,0 +1,216 @@
+﻿@{
+    ViewData["Title"] = "Chính sách Quyền riêng tư";
+    // Định nghĩa màu chủ đạo mới
+    string brandColor = "#d14d5a";
+}
+
+<style>
+    /* CSS Riêng cho trang Chính sách - ĐÃ CẬP NHẬT TÔNG MÀU #d14d5a */
+    .policy-header {
+        /* Màu nền header nhẹ nhàng, dựa trên màu brand mới */
+        background: linear-gradient(135deg, #fff7f7 0%, #ffe9eb 100%);
+        padding: 40px 0;
+        border-radius: 15px;
+        margin-bottom: 30px;
+        text-align: center;
+        border: 1px solid rgba(209, 77, 90, 0.1);
+    }
+
+    .policy-title {
+        font-family: 'Playfair Display', serif;
+        color: @brandColor; /* Màu brand mới */
+        font-weight: 700;
+        font-size: 2.5rem;
+        margin-bottom: 10px;
+    }
+
+    .policy-subtitle {
+        color: #6c757d;
+        font-size: 1.1rem;
+    }
+
+    .policy-card {
+        border: none;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+        border-radius: 15px;
+        overflow: hidden;
+    }
+
+    .policy-body {
+        padding: 40px;
+        background-color: #fff;
+    }
+
+    .policy-section {
+        margin-bottom: 30px;
+    }
+
+        .policy-section h3 {
+            color: #333;
+            font-size: 1.3rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            /* Đường gạch chân màu brand nhạt */
+            border-bottom: 2px solid rgba(209, 77, 90, 0.3);
+            padding-bottom: 10px;
+            width: fit-content;
+        }
+
+            .policy-section h3 i {
+                color: @brandColor; /* Icon màu brand mới */
+                margin-right: 10px;
+                background: rgba(209, 77, 90, 0.1); /* Nền icon màu brand rất nhạt */
+                padding: 10px;
+                border-radius: 50%;
+                font-size: 1.1rem;
+                width: 40px;
+                height: 40px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+    .policy-content ul {
+        padding-left: 25px;
+    }
+
+    .policy-content li {
+        margin-bottom: 10px;
+        color: #555;
+        list-style-type: none;
+        position: relative;
+        line-height: 1.6;
+    }
+
+        /* Dấu check màu brand mới */
+        .policy-content li::before {
+            content: "\f00c";
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            color: @brandColor;
+            position: absolute;
+            left: -25px;
+            top: 2px;
+            font-size: 0.9rem;
+        }
+
+    .contact-box {
+        background-color: #f8f9fa;
+        border-left: 5px solid @brandColor; /* Viền trái màu brand mới */
+        padding: 25px;
+        border-radius: 8px;
+    }
+
+    /* Class hỗ trợ màu text brand mới */
+    .text-brand {
+        color: @brandColor !important;
+    }
+</style>
+
+<div class="container py-4 mb-5">
+    <div class="policy-header">
+        <h1 class="policy-title">@ViewData["Title"]</h1>
+        <p class="policy-subtitle mb-0">Cam kết bảo mật thông tin khách hàng tại DCD Cosmetic</p>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card policy-card">
+                <div class="policy-body">
+
+                    <div class="mb-5 text-center">
+                        <h4 class="mb-3" style="font-family: 'Playfair Display', serif; color: #333;"> Kính chào quý khách hàng</h4>
+                        <p class="text-muted" style="font-size: 1.05rem;">
+                            Chúng tôi hiểu rằng thông tin cá nhân của bạn là tài sản quý giá. Chính sách này được tạo ra để minh bạch hóa cách chúng tôi thu thập, sử dụng và bảo vệ dữ liệu của bạn khi trải nghiệm mua sắm tại <strong>DCD Cosmetic</strong>.
+                        </p>
+                    </div>
+
+                    <div class="policy-section">
+                        <h3><i class="fa-solid fa-file-pen"></i> 1. Thông tin chúng tôi thu thập</h3>
+                        <div class="policy-content">
+                            <p>Để xử lý đơn hàng và cung cấp dịch vụ tốt nhất, chúng tôi có thể thu thập:</p>
+                            <ul>
+                                <li><strong>Thông tin định danh:</strong> Tên đầy đủ, ngày sinh, giới tính.</li>
+                                <li><strong>Thông tin liên lạc:</strong> Số điện thoại, địa chỉ email, địa chỉ giao hàng.</li>
+                                <li><strong>Thông tin giao dịch:</strong> Chi tiết đơn hàng, lịch sử mua sắm (Lưu ý: Chúng tôi không lưu trữ thông tin thẻ tín dụng/ngân hàng).</li>
+                                <li><strong>Dữ liệu tự động:</strong> Địa chỉ IP, loại trình duyệt, thời gian truy cập (thông qua Cookies).</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="policy-section">
+                        <h3><i class="fa-solid fa-bullseye"></i> 2. Phạm vi sử dụng thông tin</h3>
+                        <div class="policy-content">
+                            <p>Thông tin của bạn chỉ được sử dụng cho các mục đích hợp pháp sau:</p>
+                            <ul>
+                                <li>Xác nhận và xử lý đơn hàng, giao hàng.</li>
+                                <li>Gửi thông báo về trạng thái đơn hàng và hỗ trợ khách hàng.</li>
+                                <li>Cung cấp thông tin về sản phẩm mới, chương trình khuyến mãi (chỉ khi bạn đăng ký nhận tin).</li>
+                                <li>Phát hiện và ngăn chặn các hành vi giả mạo, phá hoại tài khoản người dùng.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="policy-section">
+                        <h3><i class="fa-solid fa-user-shield"></i> 3. Cam kết bảo mật</h3>
+                        <div class="policy-content">
+                            <p>
+                                Chúng tôi áp dụng các biện pháp kỹ thuật và an ninh phù hợp để ngăn chặn truy cập trái phép.
+                                Dữ liệu cá nhân của bạn được lưu trữ trên các máy chủ an toàn và được bảo vệ bởi tường lửa.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="policy-section">
+                        <h3><i class="fa-solid fa-share-nodes"></i> 4. Chia sẻ thông tin</h3>
+                        <div class="policy-content">
+                            <p>Chúng tôi <strong>KHÔNG</strong> bán hay trao đổi thông tin cá nhân của khách hàng cho bên thứ ba, ngoại trừ:</p>
+                            <ul>
+                                <li><strong>Đơn vị vận chuyển:</strong> Để giao hàng đến tay bạn.</li>
+                                <li><strong>Cơ quan pháp luật:</strong> Khi có yêu cầu hợp pháp từ cơ quan nhà nước có thẩm quyền.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="policy-section">
+                        <h3><i class="fa-solid fa-cookie-bite"></i> 5. Về Cookies</h3>
+                        <div class="policy-content">
+                            <p>
+                                Website sử dụng Cookies để ghi nhớ cài đặt của bạn và nâng cao trải nghiệm mua sắm.
+                                Bạn có thể tắt Cookies trong cài đặt trình duyệt, nhưng điều này có thể hạn chế một số tính năng của website.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="policy-section">
+                        <h3><i class="fa-solid fa-scale-balanced"></i> 6. Quyền lợi khách hàng</h3>
+                        <div class="policy-content">
+                            <ul>
+                                <li>Yêu cầu truy cập và chỉnh sửa thông tin cá nhân.</li>
+                                <li>Yêu cầu xóa dữ liệu cá nhân (trong phạm vi pháp luật cho phép).</li>
+                                <li>Từ chối nhận email quảng cáo bất cứ lúc nào.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="policy-section mb-0">
+                        <h3><i class="fa-solid fa-headset"></i> 7. Thông tin liên hệ</h3>
+                        <div class="contact-box">
+                            <p class="mb-3" style="font-size: 1.1rem;">Mọi thắc mắc về chính sách bảo mật, vui lòng liên hệ:</p>
+                            <p class="mb-2"><i class="fa-solid fa-envelope text-brand me-3"></i> <strong>Email:</strong>babooan01@gmail.com</p>
+                            <p class="mb-2"><i class="fa-solid fa-phone text-brand me-3"></i> <strong>Hotline:</strong>0379077450</p>
+                            <p class="mb-0 text-muted"><i class="fa-solid fa-location-dot me-3" style="opacity: 0.7"></i> 296 Lĩnh Nam, Phường Lĩnh Nam, Quận Hoàng Mai, TP. Hà Nội</p>
+                        </div>
+                    </div>
+
+                    <div class="text-center mt-5 text-muted small py-3 border-top">
+                        <p class="mb-0">Hiệu lực từ: @DateTime.Now.ToString("dd/MM/yyyy") | Phiên bản 1.2</p>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

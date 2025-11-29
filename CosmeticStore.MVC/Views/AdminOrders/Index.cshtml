@@ -1,0 +1,66 @@
+﻿@model IEnumerable<CosmeticStore.MVC.Models.Order>
+
+@{
+    ViewData["Title"] = "Quản lý Đơn hàng";
+    Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
+}
+
+<div class="container py-5">
+    <h2 class="fw-bold mb-4 text-primary">QUẢN LÝ ĐƠN HÀNG</h2>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <table class="table table-hover align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Mã ĐH</th>
+                        <th>Ngày đặt</th>
+                        <th>Khách hàng</th>
+                        <th>Tổng tiền</th>
+                        <th>Trạng thái</th>
+                        <th>Hành động</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td class="fw-bold">#@item.OrderId</td>
+                            <td>@item.OrderDate?.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>
+                                <div>@item.CustomerName</div>
+                                <small class="text-muted">@item.CustomerPhone</small>
+                            </td>
+                            <td class="text-danger fw-bold">
+                                @item.TotalAmount.ToString("#,##0") đ
+                            </td>
+                            <td>
+                                @if (item.Status == "Pending")
+                                {
+                                    <span class="badge bg-warning text-dark">Chờ xử lý</span>
+                                }
+                                else if (item.Status == "Shipped")
+                                {
+                                    <span class="badge bg-primary">Đang giao</span>
+                                }
+                                else if (item.Status == "Completed")
+                                {
+                                    <span class="badge bg-success">Hoàn thành</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">@item.Status</span>
+                                }
+                            </td>
+                            <td>
+                                <a asp-action="Details" asp-route-id="@item.OrderId" class="btn btn-sm btn-outline-primary">
+                                    Xem chi tiết
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

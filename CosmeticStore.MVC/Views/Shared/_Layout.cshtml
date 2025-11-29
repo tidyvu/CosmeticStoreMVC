@@ -1,0 +1,390 @@
+﻿@using Microsoft.AspNetCore.Http
+@using CosmeticStore.MVC.Helpers
+@using CosmeticStore.MVC.Models
+@using Microsoft.EntityFrameworkCore
+@inject CosmeticStore.MVC.Models.CosmeticStoreContext _context
+
+@{
+    // Lấy danh sách hàng trong Session ra để đếm
+    var cart = Context.Session.Get<List<CartItem>>("Cart") ?? new List<CartItem>();
+    // Tính tổng số lượng sản phẩm
+    int cartCount = cart.Sum(x => x.Quantity);
+}
+@{
+    var isAuthenticated = User?.Identity?.IsAuthenticated ?? false;
+    var userName = User?.Identity?.Name ?? "";
+    // Định nghĩa màu chủ đạo mới từ yêu cầu: #d14d5a
+    string brandColor = "#d14d5a";
+    string secondaryColor = "#e06c75"; // Màu sáng hơn, dùng cho tiêu đề footer
+    string socialIconBgColor = "#5f8a65"; // Màu xanh rêu cho Social Icons (giữ nguyên theo CSS cũ)
+    string messengerColor = "#0084ff"; // Màu xanh Messenger (giữ nguyên)
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - CosmeticStore.MVC</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/CosmeticStore.MVC.styles.css" asp-append-version="true" />
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+
+    <style>
+        /* ------------------------------------------------------------------ */
+        /* CSS CHO HEADER (Smart Header) */
+        /* ------------------------------------------------------------------ */
+        .navbar {
+            transition: transform 0.3s ease-in-out;
+        }
+
+        .sticky-header {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1030;
+        }
+
+        .header-hidden {
+            transform: translateY(-100%);
+        }
+
+        .content-padding {
+            padding-top: 70px;
+        }
+
+        /* ------------------------------------------------------------------ */
+        /* CSS CHO FOOTER */
+        /* ------------------------------------------------------------------ */
+        .site-footer {
+            background-color: #f7f7f7;
+            color: #333;
+            padding: 40px 0 20px;
+            font-family: Arial, sans-serif;
+        }
+
+        .footer-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 15px;
+            flex-wrap: wrap;
+        }
+
+        .footer-col {
+            flex-basis: 22%;
+            margin-bottom: 20px;
+        }
+
+            /* Cập nhật màu tiêu đề footer theo yêu cầu #e06c75 (màu brand cũ) */
+            .footer-col h3, .footer-col h4 {
+                color: @secondaryColor;
+                margin-bottom: 15px;
+                font-size: 16px;
+                text-transform: uppercase;
+                font-weight: bold;
+            }
+
+        .footer-contact .slogan {
+            font-style: italic;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .footer-col ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+            .footer-col ul li {
+                margin-bottom: 8px;
+            }
+
+                .footer-col ul li a, .footer-contact p a {
+                    text-decoration: none;
+                    color: #666;
+                    font-size: 14px;
+                    transition: color 0.3s;
+                }
+
+                    /* Cập nhật màu hover link theo yêu cầu #d14d5a (màu brand mới) */
+                    .footer-col ul li a:hover, .footer-contact p a:hover {
+                        color: @brandColor;
+                        text-decoration: underline;
+                    }
+
+        .footer-newsletter input[type="email"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        /* Cập nhật màu nút Đăng ký theo yêu cầu #e06c75 */
+        .footer-newsletter button {
+            background-color: @secondaryColor;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            transition: background-color 0.3s;
+        }
+
+            /* Cập nhật màu hover nút Đăng ký theo yêu cầu #d14d5a */
+            .footer-newsletter button:hover {
+                background-color: @brandColor;
+            }
+
+        .footer-bottom {
+            text-align: center;
+            padding-top: 20px;
+            margin-top: 20px;
+            border-top: 1px solid #ddd;
+        }
+
+            .footer-bottom p {
+                margin: 0;
+                font-size: 13px;
+                color: #888;
+            }
+
+        /* ------------------------------------------------------------------ */
+        /* CSS CHO SOCIAL ICONS & CHAT ICON (DÙNG SVG) */
+        /* ------------------------------------------------------------------ */
+        .social-icons {
+            margin-top: 20px;
+            display: flex;
+            gap: 15px;
+        }
+
+        .social-icon {
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            width: 48px;
+            height: 48px;
+            border-radius: 8px; /* Vuông bo góc */
+            background-color: @socialIconBgColor; /* Màu xanh rêu */
+            transition: opacity 0.3s ease;
+            text-decoration: none;
+        }
+
+            .social-icon:hover {
+                opacity: 0.8;
+            }
+
+            /* Định dạng cho thẻ SVG bên trong */
+            .social-icon svg {
+                width: 24px;
+                height: 24px;
+                fill: white; /* Tô màu trắng cho icon */
+            }
+
+        /* Chat Icon Style */
+        .chat-icon {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            width: 60px;
+            height: 60px;
+            background-color: @messengerColor;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            z-index: 1100;
+            transition: transform 0.3s ease;
+            text-decoration: none;
+        }
+
+            .chat-icon:hover {
+                transform: scale(1.1);
+                background-color: #0073e6;
+            }
+
+            .chat-icon svg {
+                width: 30px;
+                height: 30px;
+                fill: white;
+            }
+
+        /* Responsive */
+       
+
+        .chat-icon {
+            width: 50px;
+            height: 50px;
+            bottom: 15px;
+            right: 15px;
+        }
+
+            .chat-icon svg {
+                width: 24px;
+                height: 24px;
+            }
+
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3 sticky-header" id="main-navbar">
+            <div class="container-fluid">
+                <a class="navbar-brand d-flex align-items-center" asp-controller="Home" asp-action="Index">
+                    <i class="fa-solid fa-spa text-danger me-2" style="font-size: 1.5rem;"></i>
+                    <span class="fw-bold text-uppercase" style="font-family: 'Playfair Display', serif; font-size: 1.5rem; color: #333;">
+                        DCD <span class="text-danger">Cosmetic</span>
+                    </span>
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
+                    <ul class="navbar-nav flex-grow-1">
+                        <li class="nav-item"><a class="nav-link text-dark fw-bold text-uppercase mx-2" asp-controller="Home" asp-action="Index">Trang chủ</a></li>
+                        <li class="nav-item"><a class="nav-link text-dark fw-bold text-uppercase mx-2" asp-controller="Home" asp-action="Privacy">Chính sách</a></li>
+
+                        <li class="nav-item"><a class="nav-link text-dark fw-bold text-uppercase mx-2" asp-controller="Home" asp-action="StoreLocator">Hệ thống cửa hàng</a></li>
+                    </ul>
+                    <li class="nav-item" style="list-style: none;">
+                        <a class="nav-link text-dark" asp-controller="Cart" asp-action="Index">
+                            <i class="fa fa-shopping-cart"></i> Giỏ hàng <span class="badge bg-danger">@cartCount</span>
+                        </a>
+                    </li>
+                    @if (isAuthenticated)
+                    {
+                        <li class="nav-item dropdown" style="list-style: none;">
+                            <a class="nav-link dropdown-toggle text-dark fw-bold" href="#" role="button" data-bs-toggle="dropdown">
+                                Xin chào, @User.Identity.Name
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li>
+                                    <a class="dropdown-item" asp-controller="Account" asp-action="Profile">
+                                        <i class="fa fa-user me-2"></i> Thông tin cá nhân
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" asp-controller="Account" asp-action="MyOrders">
+                                        <i class="fa fa-box me-2"></i> Đơn hàng của tôi
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" asp-controller="Account" asp-action="Logout"><i class="fa fa-sign-out me-2"></i> Đăng xuất</a></li>
+                            </ul>
+                        </li>
+                    }
+                    else
+                    {
+                        <li class="nav-item" style="list-style: none;"><a class="nav-link text-dark" asp-controller="Account" asp-action="Login">Đăng nhập</a></li>
+                        <li class="nav-item" style="list-style: none;"><a class="nav-link text-dark" asp-controller="Account" asp-action="Register">Đăng ký</a></li>
+                    }
+                    @if (User.IsInRole("Admin"))
+                    {
+                        <li class="nav-item" style="list-style: none;"><a class="nav-link text-danger fw-bold" asp-controller="Admin" asp-action="Index"><i class="fa fa-cogs"></i> QUẢN TRỊ</a></li>
+                    }
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <div class="container content-padding" style="min-height: 80vh; padding-bottom: 100px;">
+        <main role="main" class="pb-3">
+            @RenderBody()
+        </main>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-container">
+            <div class="footer-col footer-contact">
+                <h3>DCD Cosmetic</h3>
+                <p class="slogan">Không phải những người đẹp là những người hạnh phúc, mà những người hạnh phúc mới là những người đẹp.</p>
+                <h4>Thông tin liên hệ</h4>
+                <p><strong>Địa chỉ:</strong> 296 Lĩnh Nam, Phường Lĩnh Nam, Quận Hoàng Mai, TP. Hà Nộih</p>
+                <p><strong>Điện thoại:</strong> <a href="tel:0379077450">0379077450</a></p>
+                <p><strong>Email:</strong> <a href="mailto:babooan01@gmail.com">babooan01@gmail.com</a></p>
+            </div>
+            <div class="footer-col">
+                <h4>Chính sách</h4>
+                <ul>
+                    <li><a href="#">Chính sách và quy định chung</a></li>
+                    <li><a href="#">Chính sách thanh toán</a></li>
+                    <li><a href="#">Chính sách giao nhận</a></li>
+                    <li><a href="#">Chính sách đổi trả sản phẩm</a></li>
+                    <li><a href="#">Chính sách bảo mật thông tin cá nhân</a></li>
+                    <li><a href="#">Điều khoản sử dụng</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>Hỗ trợ</h4>
+                <ul>
+                    <li><a href="#">Quyền lợi Dino-er</a></li>
+                    <li><a href="#">Thông tin thành viên</a></li>
+                    <li><a href="#">Tích điểm đổi quà</a></li>
+                    <li><a href="#">Hệ thống cửa hàng</a></li>
+                    <li><a href="#">Tuyển dụng</a></li>
+                    <li><a href="#">Liên hệ</a></li>
+                </ul>
+            </div>
+            <div class="footer-col footer-newsletter">
+                <h4>Đăng ký nhận tin</h4>
+                <p>Nhận ngay các ưu đãi và thông tin sản phẩm mới nhất!</p>
+                <form action="#" method="post">
+                    <input type="email" placeholder="Nhập email của bạn" required>
+                    <button type="submit">Đăng ký</button>
+                </form>
+
+                <div class="social-icons">
+                    <a href="https://www.facebook.com/ovanduy.822217" target="_blank" class="social-icon facebook">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><path d="M279.14 288l14.22-92.66h-88.91v-60.13c0-25.35 12.42-50.06 52.24-50.06h40.42V6.26S260.43 0 225.36 0c-73.22 0-121.08 44.38-121.08 124.72v70.62H22.89V288h81.39v224h100.17V288z" /></svg>
+                    </a>
+                    <a href="https://twitter.com" target="_blank" class="social-icon twitter">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M459.37 151.716c.325 4.548.325 9.097.325 13.645 0 138.72-105.583 298.558-298.558 298.558-59.452 0-114.68-17.219-161.137-47.106 8.447.974 16.568 1.299 25.34 1.299 49.055 0 94.213-16.568 130.274-44.832-46.132-.975-84.792-31.188-98.112-72.772 6.498.974 12.995 1.624 19.818 1.624 9.421 0 18.843-1.3 27.614-3.573-48.081-9.747-84.143-51.98-84.143-102.985v-1.299c13.969 7.797 30.214 12.67 47.431 13.319-28.264-18.843-46.781-51.005-46.781-87.391 0-19.492 5.197-37.36 14.294-52.954 51.655 63.675 129.3 105.258 216.365 109.807-1.624-7.797-2.599-15.918-2.599-24.04 0-57.828 46.782-104.934 104.934-104.934 30.213 0 57.502 12.67 76.67 33.137 23.715-4.548 46.456-13.32 66.599-25.34-7.798 24.366-24.366 44.833-46.132 57.827 21.117-2.273 41.584-8.122 60.426-16.243-14.292 20.791-32.161 39.308-52.628 54.253z" /></svg>
+                    </a>
+                    <a href="https://youtube.com" target="_blank" class="social-icon youtube">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><path d="M549.655 124.998c-6.281-23.65-24.787-42.276-48.284-48.597C458.781 64 288 64 288 64S117.22 64 74.629 76.401c-23.5 6.321-42.003 24.947-48.284 48.597-11.412 42.867-11.412 132.305-11.412 132.305s0 89.438 11.412 132.305c6.281 23.65 24.787 41.5 48.284 47.821C117.22 448 288 448 288 448s170.78 0 213.371-11.412c23.497-6.321 42.003-24.171 48.284-47.821 11.412-42.867 11.412-132.305 11.412-132.305s0-89.438-11.412-132.305zm-317.51 213.508V175.185l142.739 81.205-142.739 82.116z" /></svg>
+                    </a>
+                    <a href="https://www.instagram.com/do_duy.04/" target="_blank" class="social-icon instagram">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M224.1 141c-63.6 0-114.9 51.3-114.9 114.9s51.3 114.9 114.9 114.9S339 319.5 339 255.9 287.7 141 224.1 141zm0 189.6c-41.1 0-74.7-33.5-74.7-74.7s33.5-74.7 74.7-74.7 74.7 33.5 74.7 74.7-33.6 74.7-74.7 74.7zm146.4-194.3c0 14.9-12 26.8-26.8 26.8-14.9 0-26.8-12-26.8-26.8s12-26.8 26.8-26.8 26.8 12 26.8 26.8zm76.1 27.2c-1.7-35.9-9.9-67.7-36.2-93.9-26.2-26.2-58-34.4-93.9-36.2-37-2.1-147.9-2.1-184.9 0-35.8 1.7-67.6 9.9-93.9 36.1s-34.4 58-36.2 93.9c-2.1 37-2.1 147.9 0 184.9 1.7 35.9 9.9 67.7 36.2 93.9s58 34.4 93.9 36.2c37 2.1 147.9 2.1 184.9 0 35.9-1.7 67.7-9.9 93.9-36.2 26.2-26.2 34.4-58 36.2-93.9 2.1-37 2.1-147.9 0-184.9zM398.8 388c-7.8 19.6-22.9 34.7-42.6 42.6-29.5 11.7-99.5 9-132.1 9s-102.7 2.6-132.1-9c-19.6-7.8-34.7-22.9-42.6-42.6-11.7-29.5-9-99.5-9-132.1s-2.6-102.7 9-132.1c7.8-19.6 22.9-34.7 42.6-42.6 29.5-11.7 99.5-9 132.1-9s102.7-2.6 132.1 9c19.6 7.8 34.7 22.9 42.6 42.6 11.7 29.5 9 99.5 9 132.1s2.7 102.7-9 132.1z" /></svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; @DateTime.Now.Year DCD Cosmetic. Bảo lưu mọi quyền.</p>
+        </div>
+    </footer>
+
+    <a href="https://www.messenger.com/e2ee/t/10021515917863102" target="_blank" class="chat-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M256.55 8C116.52 8 8 110.34 8 248.57c0 72.3 29.71 134.78 78.07 177.94 8.35 7.51 6.63 11.86 8.05 58.23A19.92 19.92 0 0 0 122 502.31c52.91-23.3 53.59-25.14 62.56-22.7C337.85 521.8 504 423.7 504 248.57 504 110.34 396.59 8 256.55 8zm149.24 185.13l-73 115.57a37.37 37.37 0 0 1-53.91 9.93l-58.08-43.47a15 15 0 0 0-18 0l-78.37 59.44c-10.46 7.93-24.16-4.6-17.11-15.67l73-115.57a37.36 37.36 0 0 1 53.91-9.93l58.06 43.46a15 15 0 0 0 18 0l78.41-59.38c10.44-7.98 24.14 4.54 17.09 15.62z" /></svg>
+    </a>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script>
+        $(document).ready(function () {
+            var lastScrollTop = 0;
+            var headerHeight = $('#main-navbar').outerHeight();
+            $(window).scroll(function () {
+                var st = $(this).scrollTop();
+                if (st > headerHeight) {
+                    if (st > lastScrollTop) $('#main-navbar').addClass('header-hidden');
+                    else $('#main-navbar').removeClass('header-hidden');
+                } else if (st < 10) $('#main-navbar').removeClass('header-hidden');
+                lastScrollTop = st;
+            });
+        });
+    </script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

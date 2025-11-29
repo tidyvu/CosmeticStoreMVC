@@ -1,0 +1,117 @@
+﻿@{
+    ViewData["Title"] = "Đặt hàng thành công";
+
+    // Định nghĩa tông màu mới
+    string brandRed = "#d14d5a";    // Đỏ San Hô đậm (Coral Red)
+    string lightPink = "#f7e6e9";  // Hồng Nhạt (Light Pink)
+}
+
+<style>
+    /* ------------------------------------------------------------------ */
+    /* CSS TÙY CHỈNH THEO TÔNG ĐỎ SAN HÔ */
+    /* ------------------------------------------------------------------ */
+
+    /* Màu tùy chỉnh chung */
+    .text-custom-primary {
+        color: @brandRed !important;
+    }
+
+    .bg-custom-light {
+        background-color: @lightPink !important;
+    }
+
+    .btn-primary-custom {
+        background-color: @brandRed !important;
+        border-color: @brandRed !important;
+        color: white;
+    }
+
+        .btn-primary-custom:hover {
+            background-color: #b03d47 !important;
+            border-color: #b03d47 !important;
+        }
+
+    .btn-outline-custom-primary {
+        color: @brandRed !important;
+        border-color: @brandRed !important;
+    }
+
+        .btn-outline-custom-primary:hover {
+            background-color: @brandRed !important;
+            color: white !important;
+        }
+
+    /* Card chính */
+    .card.shadow-sm {
+        background-color: @lightPink !important; /* Nền card màu Hồng Nhạt */
+        border: none;
+        box-shadow: 0 0 20px rgba(0,0,0,0.08) !important;
+    }
+
+    /* Biểu tượng thành công */
+    .mb-4 .fa-check-circle {
+        color: @brandRed !important; /* Màu Đỏ San Hô cho biểu tượng */
+    }
+
+    /* Tiêu đề */
+    h1.fw-bold {
+        color: @brandRed; /* Màu Đỏ San Hô cho tiêu đề */
+    }
+
+    /* Nút bấm */
+    .btn {
+        border-radius: 0.3rem;
+        font-weight: 600;
+    }
+</style>
+
+<div class="container py-5 text-center">
+    <div class="card shadow-sm border-0 p-5 mx-auto" style="max-width: 600px;">
+        <div class="mb-4">
+            @* Loại bỏ text-success để dùng CSS tùy chỉnh *@
+            <i class="fa fa-check-circle" style="font-size: 80px;"></i>
+        </div>
+
+        <h1 class="fw-bold text-uppercase mb-3">Đặt hàng thành công!</h1>
+
+        <p class="lead text-muted">
+            Cảm ơn bạn đã mua sắm tại <strong>Cosmetic Store</strong>.
+        </p>
+        <p class="text-muted mb-4">
+            Đơn hàng của bạn đang được xử lý. Chúng tôi sẽ liên hệ xác nhận sớm nhất.
+            <br />
+            Bạn sẽ được chuyển hướng về trang chủ sau <span id="countdown">5</span> giây.
+        </p>
+
+        <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
+            <a asp-controller="Account" asp-action="MyOrders" class="btn btn-outline-custom-primary px-4">
+                @* Thay btn-outline-primary bằng btn-outline-custom-primary *@
+                Xem đơn hàng của tôi
+            </a>
+            <a asp-controller="Products" asp-action="Index" class="btn btn-primary-custom px-4">
+                @* Thay btn-success bằng btn-primary-custom *@
+                Tiếp tục mua sắm
+            </a>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            let countdownElement = document.getElementById('countdown');
+            let countdown = 5;
+
+            function updateCountdown() {
+                countdownElement.textContent = countdown;
+                if (countdown === 0) {
+                    window.location.href = "@Url.Action("Index", "Home")"; // Chuyển hướng về trang chủ
+                } else {
+                    countdown--;
+                    setTimeout(updateCountdown, 1000);
+                }
+            }
+            updateCountdown();
+        });
+    </script>
+}

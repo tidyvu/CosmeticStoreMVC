@@ -1,0 +1,41 @@
+﻿@model CosmeticStore.MVC.Models.Brand
+
+@{
+    ViewData["Title"] = "Delete Brand";
+}
+
+<div class="container py-5" style="max-width: 600px;">
+    <div class="card shadow-lg border-0">
+        <div class="card-header bg-danger text-white text-center">
+            <h3 class="mb-0">Xác nhận xóa thương hiệu</h3>
+        </div>
+
+        <div class="card-body">
+            <div class="alert alert-warning text-center">
+                ⚠️ <strong>Bạn có chắc chắn muốn xóa thương hiệu này?</strong>
+                <br />Hành động này không thể hoàn tác!
+            </div>
+
+            <dl class="row">
+                <dt class="col-sm-4 fw-bold">Tên thương hiệu:</dt>
+                <dd class="col-sm-8">@Html.DisplayFor(model => model.BrandName)</dd>
+
+                <dt class="col-sm-4 fw-bold">Logo:</dt>
+                <dd class="col-sm-8">
+                    @Html.DisplayFor(model => model.LogoUrl)
+                    <br />
+                    <img src="@Model.LogoUrl" alt="Logo" class="img-thumbnail mt-2" style="max-width: 150px;" />
+                </dd>
+            </dl>
+
+            <form asp-action="Delete" method="post">
+                <input type="hidden" asp-for="BrandId" />
+
+                <div class="d-flex justify-content-between mt-4">
+                    <a asp-action="Index" class="btn btn-secondary"> Quay lại</a>
+                    <button type="submit" class="btn btn-danger"> Xóa</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

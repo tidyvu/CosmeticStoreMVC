@@ -1,0 +1,374 @@
+﻿@model CosmeticStore.MVC.Models.Product
+
+@{
+    ViewData["Title"] = Model.ProductName;
+    var firstVariant = Model.ProductVariants.FirstOrDefault();
+    var imageUrl = string.IsNullOrEmpty(Model.MainImageUrl) ? "/images/placeholder.png" : Model.MainImageUrl;
+
+    // --- Tính Rating trung bình ---
+    double averageRating = 0;
+    if (Model.Reviews != null && Model.Reviews.Any())
+    {
+        averageRating = Model.Reviews.Average(r => r.Rating);
+    }
+
+    // Định nghĩa tông màu mới
+    string brandRed = "#d14d5a";    // Đỏ San Hô đậm (Coral Red)
+    string lightPink = "#f7e6e9";  // Hồng Nhạt (Light Pink)
+}
+
+<style>
+    /* ------------------------------------------------------------------ */
+    /* CSS TÙY CHỈNH THEO TÔNG ĐỎ SAN HÔ */
+    /* ------------------------------------------------------------------ */
+
+    /* Màu tùy chỉnh */
+    .text-custom-primary {
+        color: @brandRed !important;
+    }
+
+    .btn-primary-custom {
+        background-color: @brandRed !important;
+        border-color: @brandRed !important;
+        color: white;
+    }
+
+        .btn-primary-custom:hover {
+            background-color: #b03d47 !important;
+            border-color: #b03d47 !important;
+        }
+
+    .btn-outline-custom-primary {
+        color: @brandRed !important;
+        border-color: @brandRed !important;
+    }
+
+        .btn-outline-custom-primary:hover {
+            background-color: @brandRed !important;
+            color: white !important;
+        }
+
+    /* Giá và Đánh giá */
+    #price-display {
+        color: @brandRed !important; /* Giá tiền */
+    }
+
+    .text-warning {
+        color: @brandRed !important; /* Màu sao */
+    }
+
+    /* Tabs */
+    .nav-tabs .nav-link.active {
+        border-color: @brandRed @brandRed #fff;
+        color: @brandRed !important;
+        font-weight: bold;
+    }
+
+    .nav-tabs .nav-link {
+        color: #333;
+        border: 1px solid #dee2e6;
+        margin-bottom: -1px;
+    }
+
+    .tab-content {
+        border-color: #dee2e6 !important;
+    }
+
+    .card.bg-light {
+        background-color: @lightPink !important; /* Nền form đánh giá */
+    }
+
+    /* Cấu hình chung */
+    .form-control, .form-select {
+        border-radius: 0.3rem;
+    }
+    /* Loại bỏ btn-dark mặc định để sử dụng custom */
+    .btn-dark {
+        background-color: @brandRed;
+        color: #fff;
+        border-radius: 0.3rem;
+        border-color: @brandRed;
+    }
+
+        .btn-dark:hover {
+            background-color: #b03d47;
+            border-color: #b03d47;
+            color: #fff;
+        }
+</style>
+
+<div class="container py-5">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb bg-transparent p-0 mb-4">
+            <li class="breadcrumb-item"><a asp-action="Index">Trang chủ</a></li>
+            @if (Model.Category != null)
+            {
+                <li class="breadcrumb-item"><a asp-action="Index" asp-route-categoryId="@Model.CategoryId">@Model.Category.CategoryName</a></li>
+            }
+            <li class="breadcrumb-item active" aria-current="page">@Model.ProductName</li>
+        </ol>
+    </nav>
+
+    <div class="row g-4">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <img src="@imageUrl" class="card-img-top" alt="@Model.ProductName"
+                     style="object-fit: cover; width: 100%; height: auto;">
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            @if (Model.Brand != null)
+            {
+                <div class="text-uppercase text-muted small mb-2">Thương hiệu: **@Model.Brand.BrandName**</div>
+            }
+
+            <h1 class="h2 fw-bold text-custom-primary">@Model.ProductName</h1>
+
+            @if (Model.Reviews != null && Model.Reviews.Any())
+            {
+                <div class="d-flex align-items-center mb-3">
+                    <div class="text-custom-primary me-2">
+                        @* Đổi text-warning thành text-custom-primary *@
+                        @{
+                            double rating = averageRating;
+                            for (int i = 1; i <= 5; i++)
+                            {
+                                if (rating >= i)
+                                {
+                                    <i class="fa fa-star"></i>
+                                }
+                                else if (rating >= i - 0.5)
+                                {
+                                    <i class="fa fa-star-half-o"></i>
+                                }
+                                else
+                                {
+                                    <i class="fa fa-star-o text-secondary"></i>
+                                }
+                            }
+                        }
+                    </div>
+                    <span class="small text-muted">
+                        (@averageRating.ToString("F1") / 5 sao | **@Model.Reviews.Count** đánh giá)
+                    </span>
+                </div>
+            }
+
+            <div id="price-display" class="fs-3 fw-bold my-3">
+                @* Đã điều chỉnh màu trong CSS tùy chỉnh *@
+                @(firstVariant != null ? firstVariant.Price.ToString("#,##0") + " đ" : "Liên hệ")
+            </div>
+
+            <div class="mb-3">
+                <span id="stock-badge" class="badge @(firstVariant != null && firstVariant.StockQuantity > 0 ? "bg-success" : "bg-danger")">
+                    @(firstVariant != null && firstVariant.StockQuantity > 0 ? "Còn hàng (" + firstVariant.StockQuantity + ")" : "Hết hàng")
+                </span>
+            </div>
+
+            <p class="text-muted">
+                @Html.Raw(Model.Description != null && Model.Description.Length > 150
+                                ? Model.Description.Substring(0, 150) +"..."
+                                : Model.Description)
+            </p>
+
+            <hr />
+
+            <form asp-controller="Cart" asp-action="AddToCart" method="get" class="mt-4 d-flex flex-column gap-3">
+                <input type="hidden" name="productId" value="@Model.ProductId" />
+
+                @if (Model.ProductVariants.Any())
+                {
+                    <div>
+                        <label class="form-label fw-bold">Phân loại:</label>
+                        <select class="form-select w-50" name="variantId" id="variant-select">
+                            @foreach (var variant in Model.ProductVariants)
+                            {
+                                <option value="@variant.VariantId"
+                                        data-price="@variant.Price"
+                                        data-stock="@variant.StockQuantity">
+                                    @variant.VariantName - @(variant.Price.ToString("#,##0")) đ
+                                </option>
+                            }
+                        </select>
+                    </div>
+                }
+
+                <div class="d-flex gap-2">
+                    <input type="number" name="quantity" class="form-control text-center" value="1" min="1" style="width: 70px;">
+                    @* Thay btn-dark bằng CSS đã chỉnh màu Đỏ San Hô *@
+                    <button type="submit" class="btn btn-dark flex-grow-1" id="add-to-cart-btn" @(firstVariant != null && firstVariant.StockQuantity > 0 ? "" : "disabled")>THÊM VÀO GIỎ HÀNG</button>
+                </div>
+            </form>
+
+            @if (User.IsInRole("Admin"))
+            {
+                <div class="mt-3">
+                    @* Thay btn-outline-primary bằng btn-outline-custom-primary *@
+                    <a asp-controller="ProductVariants" asp-action="Index" asp-route-productId="@Model.ProductId" class="btn btn-outline-custom-primary w-100">
+                        Quản lý phân loại (Variants)
+                    </a>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="row mt-5">
+        <div class="col-12">
+            <ul class="nav nav-tabs" id="productTab" role="tablist">
+                <li class="nav-item" role="presentation">
+                    @* Thay text-dark active bằng CSS đã chỉnh *@
+                    <button class="nav-link active" id="desc-tab" data-bs-toggle="tab" data-bs-target="#desc" type="button" role="tab">Mô tả chi tiết</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    @* Thay text-dark bằng CSS đã chỉnh *@
+                    <button class="nav-link" id="review-tab" data-bs-toggle="tab" data-bs-target="#review" type="button" role="tab">Đánh giá (@Model.Reviews.Count)</button>
+                </li>
+            </ul>
+            <div class="tab-content p-4 border border-top-0 bg-white" id="productTabContent">
+                <div class="tab-pane fade show active" id="desc" role="tabpanel">
+                    @Html.Raw(Model.Description)
+                </div>
+
+                <div class="tab-pane fade" id="review" role="tabpanel">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5 class="mb-4 text-custom-primary">Đánh giá cho @Model.ProductName</h5>
+                            @if (Model.Reviews.Any())
+                            {
+                                @foreach (var review in Model.Reviews.OrderByDescending(r => r.ReviewDate))
+                                {
+                                    <div class="mb-3 border-bottom pb-2">
+                                        <div class="d-flex justify-content-between">
+                                            <h6 class="fw-bold">@review.User?.FullName</h6>
+                                            <small class="text-muted">@review.ReviewDate?.ToString("dd/MM/yyyy")</small>
+                                        </div>
+
+                                        <div class="d-flex align-items-center mb-1">
+                                            <div class="text-custom-primary me-2">
+                                                @* Màu sao đánh giá *@
+                                                @for (int i = 1; i <= 5; i++)
+                                                {
+                                                    if (i <= review.Rating)
+                                                    {
+                                                        <i class="fa fa-star"></i>
+                                                    }
+                                                    else
+                                                    {
+                                                        <i class="fa fa-star-o text-secondary"></i>
+                                                    }
+                                                }
+                                            </div>
+                                            <span class="small text-muted">
+                                                (@review.Rating / 5 sao)
+                                            </span>
+                                        </div>
+                                        <p class="text-muted mb-0">@review.Comment</p>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <p class="text-muted">Chưa có đánh giá nào. Hãy là người đầu tiên!</p>
+                            }
+                        </div>
+
+                        <div class="col-md-6">
+                            @* Nền form đánh giá dùng lightPink *@
+                            <div class="card bg-light border-0 p-4">
+                                <h5 class="fw-bold mb-3 text-custom-primary">Viết đánh giá của bạn</h5>
+
+                                @if (User.Identity.IsAuthenticated)
+                                {
+                                    <form asp-action="AddReview" asp-controller="Products" method="post">
+                                        <input type="hidden" name="productId" value="@Model.ProductId" />
+
+                                        <div class="mb-3">
+                                            <label class="form-label">Đánh giá sao:</label>
+                                            <select name="rating" class="form-select w-auto">
+                                                <option value="5">★★★★★ (Tuyệt vời)</option>
+                                                <option value="4">★★★★ (Tốt)</option>
+                                                <option value="3">★★★ (Bình thường)</option>
+                                                <option value="2">★★ (Tệ)</option>
+                                                <option value="1">★ (Rất tệ)</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label class="form-label">Nhận xét:</label>
+                                            <textarea name="comment" class="form-control" rows="3" required placeholder="Sản phẩm dùng thế nào..."></textarea>
+                                        </div>
+
+                                        @* Nút Gửi đánh giá màu Đỏ San Hô *@
+                                        <button type="submit" class="btn btn-dark">Gửi đánh giá</button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <div class="alert alert-warning">
+                                        Vui lòng <a asp-controller="Account" asp-action="Login" asp-route-returnUrl="@Context.Request.Path" class="text-custom-primary fw-bold">đăng nhập</a> để viết đánh giá.
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function formatCurrency(number) {
+            const num = parseFloat(number);
+            if (isNaN(num)) return '0 đ';
+            return num.toLocaleString('vi-VN') + ' đ';
+        }
+
+        function updateProductInfo() {
+            const selectElement = document.getElementById('variant-select');
+            const priceDisplay = document.getElementById('price-display');
+            const stockBadge = document.getElementById('stock-badge');
+            const addToCartBtn = document.getElementById('add-to-cart-btn');
+
+            if (!selectElement) return;
+
+            const selectedOption = selectElement.options[selectElement.selectedIndex];
+
+            const priceStr = selectedOption.getAttribute('data-price');
+            const stockStr = selectedOption.getAttribute('data-stock');
+
+            const price = priceStr ? parseFloat(priceStr) : NaN;
+            const stock = stockStr ? parseInt(stockStr) : NaN;
+
+            // 1. Cập nhật Giá
+            if (!isNaN(price) && price > 0) {
+                priceDisplay.textContent = formatCurrency(price);
+            } else {
+                priceDisplay.textContent = "Liên hệ";
+            }
+
+            // 2. Cập nhật Tồn kho và nút Thêm vào giỏ
+            stockBadge.classList.remove('bg-success', 'bg-danger');
+            if (!isNaN(stock) && stock > 0) {
+                stockBadge.classList.add('bg-success');
+                stockBadge.textContent = `Còn hàng (${stock})`;
+                addToCartBtn.disabled = false;
+            } else {
+                stockBadge.classList.add('bg-danger');
+                stockBadge.textContent = "Hết hàng";
+                addToCartBtn.disabled = true;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const selectElement = document.getElementById('variant-select');
+
+            if (selectElement) {
+                updateProductInfo();
+                selectElement.addEventListener('change', updateProductInfo);
+            }
+        });
+    </script>
+}

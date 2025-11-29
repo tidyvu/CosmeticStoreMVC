@@ -1,0 +1,76 @@
+﻿@model CosmeticStore.MVC.Models.Product
+
+@{
+    ViewData["Title"] = "Chỉnh sửa sản phẩm: " + Model.ProductName;
+}
+
+<div class="container py-5" style="max-width: 600px;">
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-primary text-white text-center">
+            <h3 class="mb-0">Chỉnh sửa sản phẩm</h3>
+        </div>
+        <div class="card-body">
+
+            <form asp-action="Edit" enctype="multipart/form-data">
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                <input type="hidden" asp-for="ProductId" />
+
+                <div class="mb-3">
+                    <label asp-for="ProductName" class="form-label fw-bold"></label>
+                    <input asp-for="ProductName" class="form-control" placeholder="Nhập tên sản phẩm..." />
+                    <span asp-validation-for="ProductName" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Description" class="form-label fw-bold"></label>
+                    <textarea asp-for="Description" class="form-control" rows="3" placeholder="Nhập mô tả sản phẩm..."></textarea>
+                    <span asp-validation-for="Description" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="CategoryId" class="form-label fw-bold"></label>
+                    <select asp-for="CategoryId" class="form-select" asp-items="ViewBag.CategoryId">
+                        <option value="">-- Chọn danh mục --</option>
+                    </select>
+                    <span asp-validation-for="CategoryId" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="BrandId" class="form-label fw-bold"></label>
+                    <select asp-for="BrandId" class="form-select" asp-items="ViewBag.BrandId">
+                        <option value="">-- Chọn thương hiệu --</option>
+                    </select>
+                    <span asp-validation-for="BrandId" class="text-danger"></span>
+                </div>
+
+                @if (!string.IsNullOrEmpty(Model.MainImageUrl))
+                {
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Ảnh hiện tại:</label><br />
+                        <img src="@Model.MainImageUrl" alt="Current Image" style="max-width: 150px; height: auto; border: 1px solid #ddd; padding: 5px;" />
+                        <input type="hidden" asp-for="MainImageUrl" />
+                    </div>
+                }
+
+                <div class="mb-3">
+                    <label for="ImageFile" class="form-label fw-bold">Tải lên ảnh mới</label>
+                    <input type="file" name="ImageFile" id="ImageFile" class="form-control" accept="image/*" />
+                    <small class="form-text text-muted">Chọn file ảnh mới để thay thế ảnh hiện tại.</small>
+                    <span asp-validation-for="MainImageUrl" class="text-danger"></span>
+                </div>
+
+                <div class="d-flex justify-content-between">
+                    <a asp-action="Index" class="btn btn-secondary">Quay lại</a>
+                    <button type="submit" class="btn btn-success">Lưu thay đổi</button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

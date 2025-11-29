@@ -1,0 +1,42 @@
+﻿@model IEnumerable<CosmeticStore.MVC.Models.ProductVariant>
+
+@{
+    ViewData["Title"] = "Quản lý giá - " + ViewBag.ProductName;
+}
+
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3>
+            Giá & Size cho: <span class="text-primary">@ViewBag.ProductName</span>
+        </h3>
+        <div>
+            <a asp-controller="Products" asp-action="Index" class="btn btn-secondary">Quay lại Sản phẩm</a>
+            <a asp-action="Create" asp-route-productId="@ViewBag.ProductId" class="btn btn-success">+ Thêm loại mới</a>
+        </div>
+    </div>
+
+    <table class="table table-bordered shadow-sm bg-white">
+        <thead class="table-light">
+            <tr>
+                <th>Tên loại (Size/Màu)</th>
+                <th>Giá tiền</th>
+                <th>Tồn kho</th>
+                <th>Hành động</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>@item.VariantName</td>
+                    <td class="text-danger fw-bold">@item.Price.ToString("#,##0") đ</td>
+                    <td>@item.StockQuantity</td>
+                    <td>
+                        <a asp-action="Edit" asp-route-id="@item.VariantId" class="btn btn-sm btn-primary">Sửa</a>
+                        <a asp-action="Delete" asp-route-id="@item.VariantId" class="btn btn-sm btn-danger">Xóa</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

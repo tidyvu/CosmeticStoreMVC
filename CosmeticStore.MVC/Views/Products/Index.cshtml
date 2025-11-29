@@ -1,0 +1,356 @@
+﻿@using CosmeticStore.MVC.Helpers
+@model PaginatedList<CosmeticStore.MVC.Models.Product>
+
+@{
+    ViewData["Title"] = "Mua sắm";
+    var categories = ViewBag.Categories as List<CosmeticStore.MVC.Models.Category>;
+    var brands = ViewBag.Brands as List<CosmeticStore.MVC.Models.Brand>;
+
+    // Định nghĩa tông màu mới
+    string brandRed = "#d14d5a";    // Đỏ San Hô đậm (Coral Red)
+    string lightPink = "#f7e6e9";  // Hồng Nhạt (Light Pink)
+}
+
+<style>
+    /* ------------------------------------------------------------------ */
+    /* CSS TÙY CHỈNH THEO TÔNG ĐỎ SAN HÔ */
+    /* ------------------------------------------------------------------ */
+
+    /* Màu tùy chỉnh */
+    .btn-primary-custom {
+        background-color: @brandRed !important;
+        border-color: @brandRed !important;
+        color: white;
+    }
+
+        .btn-primary-custom:hover {
+            background-color: #b03d47 !important; /* Đỏ San Hô đậm hơn */
+            border-color: #b03d47 !important;
+        }
+
+    .text-custom-primary {
+        color: @brandRed !important;
+    }
+
+    .border-custom-primary {
+        border-color: @brandRed !important;
+    }
+
+    .list-group-item.active-custom {
+        color: @brandRed !important;
+        font-weight: bold;
+    }
+
+    /* Thiết kế Product Grid */
+    .product-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 1.5rem;
+    }
+
+    /* Card sản phẩm */
+    .product-card {
+        border: 1px solid #eee;
+        border-radius: 8px;
+        overflow: hidden;
+        transition: box-shadow 0.2s;
+        background: #fff;
+        display: flex; /* Bật Flexbox để căn chỉnh chiều cao */
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+        .product-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+    /* Ảnh sản phẩm */
+    .product-img-wrap img {
+        width: 100%;
+        height: 200px;
+        object-fit: cover;
+    }
+
+    /* Thông tin sản phẩm */
+    .product-info {
+        padding: 0.5rem;
+        text-align: center;
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    .product-brand {
+        font-size: 0.85rem;
+        color: #888;
+    }
+
+    /* Tên sản phẩm không bị khuất */
+    .product-name {
+        font-weight: 600;
+        color: #333;
+        display: block;
+        margin: 0.3rem 0;
+        text-decoration: none;
+        white-space: normal;
+        min-height: 40px; /* Chiều cao tối thiểu cho 2 dòng */
+    }
+
+        .product-name:hover {
+            color: @brandRed;
+        }
+
+    .product-price {
+        color: @brandRed; /* Giá tiền màu Đỏ San Hô */
+        font-weight: bold;
+    }
+
+    /* Nút Admin (Sửa/Xóa) */
+    .btn-admin {
+        width: 48%;
+        font-size: 0.85rem;
+        font-weight: 500;
+        padding: 0.4rem 0;
+        border-radius: 6px;
+        transition: all 0.2s;
+    }
+
+        .btn-admin:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+
+    /* Màu outline cho nút admin Sửa/Xóa */
+    .btn-outline-primary {
+        color: @brandRed !important;
+        border-color: @brandRed !important;
+    }
+
+        .btn-outline-primary:hover {
+            background-color: @brandRed !important;
+            color: white !important;
+        }
+
+    .btn-outline-danger {
+        color: #dc3545 !important; /* Giữ màu đỏ tiêu chuẩn cho nút Xóa */
+        border-color: #dc3545 !important;
+    }
+
+        .btn-outline-danger:hover {
+            background-color: #dc3545 !important;
+            color: white !important;
+        }
+
+    /* Nút thêm vào giỏ */
+    .btn-add-cart {
+        background: @brandRed; /* Màu nền Đỏ San Hô */
+        padding: 0.5rem 0;
+        border-radius: 6px;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+
+        .btn-add-cart:hover {
+            background: #b03d47; /* Đỏ San Hô đậm hơn khi hover */
+            transform: translateY(-2px);
+        }
+
+    /* Phân trang */
+    .pagination .page-item .page-link {
+        color: #333;
+        border-color: #dee2e6;
+    }
+
+    .pagination .page-item.active .page-link {
+        background-color: @brandRed; /* Màu nền Đỏ San Hô cho trang hiện tại */
+        border-color: @brandRed;
+        color: white;
+    }
+
+        .pagination .page-item.active .page-link:hover {
+            background-color: #b03d47;
+            border-color: #b03d47;
+        }
+</style>
+
+<div class="container py-5">
+    <div class="row">
+        <!-- Sidebar lọc -->
+        <div class="col-md-3">
+            <!-- Tìm kiếm -->
+            <div class="mb-4">
+                <h5 class="fw-bold text-uppercase mb-3 text-custom-primary">Tìm kiếm</h5>
+                <form asp-action="Index" method="get" class="input-group">
+                    <input type="text" name="searchString" value="@ViewData["CurrentFilter"]" class="form-control" placeholder="Tên sản phẩm...">
+                    <!-- Nút tìm kiếm đổi thành màu Đỏ San Hô -->
+                    <button class="btn btn-primary-custom" type="submit"><i class="fa fa-search"></i></button>
+                </form>
+            </div>
+
+            <!-- Danh mục -->
+            <div class="mb-4">
+                <h5 class="fw-bold text-uppercase mb-3 text-custom-primary">Danh mục</h5>
+                <div class="list-group list-group-flush">
+                    <!-- Áp dụng class active-custom thay vì text-danger -->
+                    <a asp-action="Index" class="list-group-item list-group-item-action border-0 @(ViewBag.CurrentCategory == null ? "active-custom" : "")">Tất cả</a>
+                    @if (categories != null)
+                    {
+                        foreach (var c in categories)
+                        {
+                            <a asp-action="Index" asp-route-categoryId="@c.CategoryId"
+                               class="list-group-item list-group-item-action border-0 @(ViewBag.CurrentCategory == c.CategoryId ? "active-custom" : "")">
+                                @c.CategoryName
+                            </a>
+                        }
+                    }
+                </div>
+            </div>
+
+            <!-- Thương hiệu -->
+            <div class="mb-4">
+                <h5 class="fw-bold text-uppercase mb-3 text-custom-primary">Thương hiệu</h5>
+                <div class="list-group list-group-flush">
+                    <!-- Áp dụng class active-custom thay vì text-danger -->
+                    <a asp-action="Index" class="list-group-item list-group-item-action border-0 @(ViewBag.CurrentBrand == null ? "active-custom" : "")">Tất cả</a>
+                    @if (brands != null)
+                    {
+                        foreach (var b in brands)
+                        {
+                            <a asp-action="Index" asp-route-brandId="@b.BrandId"
+                               class="list-group-item list-group-item-action border-0 @(ViewBag.CurrentBrand == b.BrandId ? "active-custom" : "")">
+                                @b.BrandName
+                            </a>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-md-9">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <!-- Tiêu đề màu Đỏ San Hô -->
+                <h2 class="text-uppercase fw-bold text-custom-primary">
+                    @if (ViewBag.CurrentCategory != null)
+                    {
+                        <text>Sản phẩm theo danh mục</text>
+                    }
+                    else if (ViewBag.CurrentBrand != null)
+                    {
+                        <text>Sản phẩm theo thương hiệu</text>
+                    }
+                    else
+                    {
+                        <text>Tất cả sản phẩm</text>
+                    }
+                </h2>
+
+                @if (User.IsInRole("Admin"))
+                {
+                    <!-- Nút Thêm sản phẩm màu Đỏ San Hô -->
+                    <a asp-action="Create" class="btn btn-primary-custom btn-sm">+ Thêm sản phẩm</a>
+                }
+            </div>
+
+            <div class="product-grid">
+                @if (!Model.Any())
+                {
+                    <div class="col-12 text-center py-5">
+                        <p class="text-muted">Không tìm thấy sản phẩm nào.</p>
+                        <!-- Nút Xóa bộ lọc màu Đỏ San Hô -->
+                        <a asp-action="Index" class="btn btn-outline-custom">Xóa bộ lọc</a>
+                    </div>
+                }
+                else
+                {
+                    @foreach (var item in Model)
+                    {
+                        var firstVariant = item.ProductVariants.FirstOrDefault();
+                        var priceDisplay = firstVariant != null ? firstVariant.Price.ToString("#,##0") + " đ" : "Liên hệ";
+                        var imageUrl = string.IsNullOrEmpty(item.MainImageUrl) ? "https://via.placeholder.com/300x300?text=No+Image" : item.MainImageUrl;
+
+                        <div class="product-card">
+                            <a asp-action="Details" asp-route-id="@item.ProductId" class="product-img-wrap">
+                                <img src="@imageUrl" alt="@item.ProductName" />
+                            </a>
+
+                            <div class="product-info">
+                                @if (item.Brand != null)
+                                {
+                                    <div class="product-brand">@item.Brand.BrandName</div>
+                                }
+
+                                <a asp-action="Details" asp-route-id="@item.ProductId" class="product-name">
+                                    @item.ProductName
+                                </a>
+
+                                <div class="product-price">@priceDisplay</div>
+
+                                @if (User.IsInRole("Admin"))
+                                {
+                                    <!-- Nút Sửa/Xóa sử dụng màu outline đã chỉnh (primary = brandRed, danger = default red) -->
+                                    <div class="d-flex justify-content-between mt-2 mb-2">
+                                        <a asp-action="Edit" asp-route-id="@item.ProductId" class="btn btn-sm btn-outline-primary btn-admin">Sửa</a>
+
+                                        <form asp-action="Delete" asp-route-id="@item.ProductId" method="post" class="d-inline w-50"
+                                              onsubmit="return confirm('Bạn có chắc muốn xóa sản phẩm này không?');">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger btn-admin">Xóa</button>
+                                        </form>
+                                    </div>
+                                }
+
+                                <!-- Nút Thêm vào giỏ màu Đỏ San Hô -->
+                                <a asp-controller="Cart" asp-action="AddToCart" asp-route-productId="@item.ProductId"
+                                   class="btn btn-add-cart w-100 text-white mt-2">
+                                    Thêm vào giỏ
+                                </a>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+
+            <!-- Pagination -->
+            <div class="d-flex justify-content-center mt-4">
+                @{
+                    var prevDisabled = !Model.HasPreviousPage ? "disabled" : "";
+                    var nextDisabled = !Model.HasNextPage ? "disabled" : "";
+                }
+
+                <nav>
+                    <!-- Phân trang sử dụng CSS tùy chỉnh cho màu sắc -->
+                    <ul class="pagination">
+                        <li class="page-item @prevDisabled">
+                            <a asp-action="Index"
+                               asp-route-pageNumber="@(Model.PageIndex - 1)"
+                               asp-route-searchString="@ViewData["CurrentFilter"]"
+                               asp-route-categoryId="@ViewBag.CurrentCategory"
+                               asp-route-brandId="@ViewBag.CurrentBrand"
+                               class="page-link">
+                                &laquo; Trang trước
+                            </a>
+                        </li>
+
+                        <li class="page-item active">
+                            <span class="page-link">
+                                Trang @Model.PageIndex / @Model.TotalPages
+                            </span>
+                        </li>
+
+                        <li class="page-item @nextDisabled">
+                            <a asp-action="Index"
+                               asp-route-pageNumber="@(Model.PageIndex + 1)"
+                               asp-route-searchString="@ViewData["CurrentFilter"]"
+                               asp-route-categoryId="@ViewBag.CurrentCategory"
+                               asp-route-brandId="@ViewBag.CurrentBrand"
+                               class="page-link">
+                                Trang sau &raquo;
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,198 @@
+﻿@model IEnumerable<CosmeticStore.MVC.Models.Product>
+
+@{
+    ViewData["Title"] = "Trang chủ";
+    // Định nghĩa tông màu mới
+    string brandRed = "#d14d5a";    // Đỏ San Hô đậm (Coral Red)
+    string lightPink = "#f7e6e9";  // Hồng Nhạt (Light Pink)
+}
+
+<style>
+    /* ------------------------------------------------------------------ */
+    /* CSS TÙY CHỈNH THEO TÔNG ĐỎ SAN HÔ */
+    /* ------------------------------------------------------------------ */
+
+    /* Màu tùy chỉnh */
+    .btn-primary-custom {
+        background-color: @brandRed !important;
+        border-color: @brandRed !important;
+        color: white;
+    }
+
+        .btn-primary-custom:hover {
+            background-color: #b03d47 !important;
+            border-color: #b03d47 !important;
+        }
+
+    .text-custom-primary {
+        color: @brandRed !important;
+    }
+
+    .btn-outline-custom {
+        color: @brandRed !important;
+        border-color: @brandRed !important;
+    }
+
+        .btn-outline-custom:hover {
+            background-color: @brandRed !important;
+            color: white !important;
+        }
+
+    /* Thiết kế Product Grid */
+    .product-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+    }
+
+    .product-card {
+        border: 1px solid #eee;
+        border-radius: 8px;
+        overflow: hidden;
+        transition: box-shadow 0.3s;
+        /* Thêm thuộc tính căn chỉnh chiều cao để tránh bố cục bị nhảy */
+        display: flex;
+        flex-direction: column;
+    }
+
+        .product-card:hover {
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+    .product-img-wrap {
+        display: block;
+        overflow: hidden;
+        flex-shrink: 0; /* Đảm bảo hình ảnh không bị co lại */
+    }
+
+        .product-img-wrap img {
+            width: 100%;
+            height: auto;
+            display: block;
+            transition: transform 0.5s ease;
+        }
+
+    .product-card:hover img {
+        transform: scale(1.05);
+    }
+
+    .product-info {
+        padding: 15px;
+        text-align: center;
+        flex-grow: 1; /* Cho phép phần thông tin mở rộng */
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between; /* Đẩy giỏ hàng xuống dưới */
+    }
+
+    /* SỬA LỖI TÊN SẢN PHẨM KHÔNG BỊ KHUẤT */
+    .product-name {
+        display: block;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 5px;
+        text-decoration: none;
+        /* Đã loại bỏ: height: 40px; */
+        /* Đã loại bỏ: overflow: hidden; */
+        white-space: normal; /* Đảm bảo xuống dòng bình thường */
+        min-height: 40px; /* Đảm bảo khoảng cách tối thiểu 2 dòng */
+    }
+        /* KẾT THÚC SỬA LỖI */
+
+        .product-name:hover {
+            color: @brandRed;
+        }
+
+    .product-price {
+        font-size: 1.15rem;
+        color: @brandRed;
+        font-weight: bold;
+        margin-top: 5px;
+    }
+
+    .btn-add-cart {
+        background-color: @brandRed;
+        padding: 8px 15px;
+        border-radius: 6px;
+        transition: background-color 0.3s;
+    }
+
+        .btn-add-cart:hover {
+            background-color: #b03d47;
+        }
+</style>
+
+<div class="bg-light text-dark py-5 mb-5"
+     style="background-image: url('/images/products/banner.jpg'); background-size: cover; background-position: center; min-height: 500px;">
+    <div class="container h-100">
+        <div class="row h-100 align-items-center">
+            <div class="col-md-6 p-5" style="background: rgba(255, 255, 255, 0.85); border-radius: 10px;">
+                <h1 class="display-4 fw-bold">Vẻ đẹp tự nhiên</h1>
+                <p class="lead">Khám phá bộ sưu tập mỹ phẩm thiên nhiên mới nhất của chúng tôi. Tỏa sáng theo cách riêng của bạn.</p>
+                <a asp-controller="Products" asp-action="Index" class="btn btn-primary-custom btn-lg mt-3">Mua sắm ngay</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <div class="text-center mb-5">
+        <h2 class="fw-bold text-uppercase text-custom-primary">Sản phẩm mới</h2>
+        <div style="width: 60px; height: 3px; background-color: @brandRed; margin: 10px auto;"></div>
+        <p class="text-muted">Cập nhật những xu hướng làm đẹp mới nhất</p>
+    </div>
+
+    <div class="product-grid">
+        @foreach (var item in Model)
+        {
+            var firstVariant = item.ProductVariants.FirstOrDefault();
+            var priceDisplay = firstVariant != null ? firstVariant.Price.ToString("#,##0") + " đ" : "Liên hệ";
+            var imageUrl = string.IsNullOrEmpty(item.MainImageUrl) ? "https://via.placeholder.com/300x300?text=No+Image" : item.MainImageUrl;
+
+            <div class="product-card">
+                <a asp-controller="Products" asp-action="Details" asp-route-id="@item.ProductId" class="product-img-wrap">
+                    <img src="@imageUrl" alt="@item.ProductName" />
+                </a>
+
+                <div class="product-info">
+                    <a asp-controller="Products" asp-action="Details" asp-route-id="@item.ProductId" class="product-name">
+                        @item.ProductName
+                    </a>
+                    <div class="product-price">@priceDisplay</div>
+
+                    <div class="d-flex justify-content-center gap-2 mt-auto">
+                        <a asp-controller="Cart" asp-action="AddToCart" asp-route-productId="@item.ProductId" class="btn-add-cart text-decoration-none text-center d-block text-white w-100">
+                            Thêm vào giỏ
+                        </a>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="text-center mt-5 mb-5">
+        <a asp-controller="Products" asp-action="Index" class="btn btn-outline-custom px-5 py-2">XEM TẤT CẢ SẢN PHẨM</a>
+    </div>
+</div>
+
+<div class="py-5 mt-5" style="background-color: @lightPink;">
+    <div class="container">
+        <div class="row text-center">
+            <div class="col-md-4 mb-3">
+                <div class="fs-1 text-custom-primary mb-3"><i class="fa fa-shipping-fast"></i></div>
+                <h5 class="fw-bold">Giao hàng hỏa tốc</h5>
+                <p class="text-muted">Nhận hàng trong vòng 24h nội thành</p>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="fs-1 text-custom-primary mb-3"><i class="fa fa-check-shield"></i></div>
+                <h5 class="fw-bold">Sản phẩm chính hãng</h5>
+                <p class="text-muted">Cam kết 100% authentic, hoàn tiền gấp đôi</p>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="fs-1 text-custom-primary mb-3"><i class="fa fa-headset"></i></div>
+                <h5 class="fw-bold">Hỗ trợ 24/7</h5>
+                <p class="text-muted">Hotline tư vấn miễn phí: 0379077450</p>
+            </div>
+        </div>
+    </div>
+</div>

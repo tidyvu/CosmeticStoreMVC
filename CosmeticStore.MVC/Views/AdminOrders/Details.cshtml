@@ -1,0 +1,88 @@
+﻿@model CosmeticStore.MVC.Models.Order
+
+@{ 
+    ViewData["Title"] = "Chi tiết đơn hàng #" + Model.OrderId; 
+    Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
+}
+
+<div class="container py-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Chi tiết đơn hàng #@Model.OrderId</h2>
+        <a asp-action="Index" class="btn btn-secondary">Quay lại danh sách</a>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white fw-bold">Thông tin khách hàng</div>
+                <div class="card-body">
+                    <p><strong>Họ tên:</strong> @Model.CustomerName</p>
+                    <p><strong>SĐT:</strong> @Model.CustomerPhone</p>
+                    <p><strong>Địa chỉ:</strong> @Model.ShippingAddress</p>
+                    <p><strong>Ngày đặt:</strong> @Model.OrderDate?.ToString("dd/MM/yyyy HH:mm")</p>
+                    
+                    <hr/>
+                    <form asp-action="UpdateStatus" method="post">
+                        <input type="hidden" name="orderId" value="@Model.OrderId" />
+                        <label class="form-label fw-bold">Cập nhật trạng thái:</label>
+                        <select name="status" class="form-select mb-2">
+                            <option value="Pending" selected="@(Model.Status == "Pending")">Chờ xử lý</option>
+                            <option value="Shipped" selected="@(Model.Status == "Shipped")">Đang giao hàng</option>
+                            <option value="Completed" selected="@(Model.Status == "Completed")">Hoàn thành</option>
+                            <option value="Cancelled" selected="@(Model.Status == "Cancelled")">Đã hủy</option>
+                        </select>
+                        <button type="submit" class="btn btn-primary w-100">Cập nhật</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-dark text-white fw-bold">Sản phẩm đã mua</div>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Sản phẩm</th>
+                            <th>Đơn giá</th>
+                            <th>Số lượng</th>
+                            <th>Thành tiền</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.OrderDetails)
+                        {
+                            var product = item.Variant?.Product;
+                            var variantName = item.Variant?.VariantName;
+
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <img src="@(product?.MainImageUrl ?? "https://via.placeholder.com/50")"
+                                             width="50" height="50" style="object-fit:cover" class="me-2 border" />
+                                        <div>
+                                            <span class="fw-bold">@product?.ProductName</span>
+                                            <br />
+                                            <small class="text-muted">Phân loại: @variantName</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>@item.UnitPrice.ToString("#,##0") đ</td>
+                                <td>x @item.Quantity</td>
+                                <td class="fw-bold text-danger">
+                                    @((item.Quantity * item.UnitPrice).ToString("#,##0")) đ
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot class="bg-light">
+                        <tr>
+                            <td colspan="3" class="text-end fw-bold">TỔNG CỘNG:</td>
+                            <td class="fw-bold text-danger fs-5">@Model.TotalAmount.ToString("#,##0") đ</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,245 @@
+﻿@{
+    ViewData["Title"] = "Hệ thống cửa hàng";
+   
+    string brandRed = "#d14d5a";   
+    string lightPink = "#f7e6e9";  
+}
+
+<style>
+   
+    .store-container {
+        padding: 30px 0;
+    }
+
+    
+    .metrics-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 15px;
+        margin-bottom: 30px;
+    }
+
+    .metric-card {
+        flex: 1;
+        padding: 20px;
+        border-radius: 12px;
+        text-align: center;
+        color: #333;
+        font-weight: 600;
+        position: relative;
+        overflow: hidden;
+        /* Nền Hồng Nhạt cho metric cards */
+        background-color: @lightPink;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    }
+
+        .metric-card h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.5rem;
+            color: @brandRed; /* Số liệu màu Đỏ San Hô */
+            margin-bottom: 5px;
+        }
+
+        .metric-card p {
+            font-size: 1rem;
+            text-transform: uppercase;
+            margin-bottom: 0;
+            color: #555;
+        }
+
+        .metric-card i {
+            position: absolute;
+            top: 50%;
+            right: 15px;
+            transform: translateY(-50%);
+            font-size: 3rem;
+            color: rgba(209, 77, 90, 0.2); /* Icon mờ (Đỏ San Hô opacity 0.2) */
+        }
+
+    .store-filter-sidebar {
+        background-color: #f8f9fa;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    }
+
+        .store-filter-sidebar h4 {
+            color: @brandRed; 
+            font-weight: bold;
+            margin-bottom: 20px;
+            border-bottom: 2px solid @brandRed;
+            padding-bottom: 10px;
+        }
+
+    .custom-select-green {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 15px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        background-color: @lightPink; 
+        color: #333;
+        font-weight: 500;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        /* Icon mũi tên SVG tùy chỉnh màu Đỏ San Hô */
+        background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23d14d5a'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 10px center;
+        background-size: 16px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+
+        .custom-select-green:hover {
+            background-color: #f9eef1; /* Màu Hồng nhạt hơn khi hover */
+        }
+
+    .store-list-item {
+        border-left: 5px solid @brandRed; /* Viền nổi bật màu Đỏ San Hô */
+        padding: 15px;
+        margin-bottom: 15px;
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+
+        .store-list-item h5 {
+            color: @brandRed;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .store-list-item p {
+            margin-bottom: 5px;
+            font-size: 0.95rem;
+            color: #555;
+        }
+
+        .store-list-item a {
+            color: #333;
+            text-decoration: none;
+        }
+
+    /* === 3. Map & Details === */
+    .map-container {
+        height: 500px;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        position: relative;
+    }
+
+    /* === 4. Floating Button (Notification) === */
+    .floating-notification-btn {
+        position: fixed;
+        bottom: 100px;
+        left: 20px;
+        width: 55px;
+        height: 55px;
+        background-color: @brandRed; /* Nền Đỏ San Hô */
+        border-radius: 50%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color: white;
+        font-size: 1.2rem;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        z-index: 1000;
+        cursor: pointer;
+        transition: background-color 0.3s, transform 0.3s;
+    }
+
+        .floating-notification-btn:hover {
+            background-color: #b03d47; /* Màu đậm hơn khi hover */
+            transform: scale(1.1);
+        }
+
+    /* Responsive adjustments */
+    
+
+    .map-container {
+        height: 350px;
+        margin-top: 30px;
+    }
+
+    .store-filter-sidebar {
+        margin-bottom: 20px;
+    }
+
+    }
+</style>
+
+<div class="store-container">
+    <h1 class="text-center mb-4" style="color: @brandRed; font-family: 'Playfair Display', serif;">
+        <i class="fa-solid fa-map-location-dot me-2"></i> Hệ thống Cửa hàng DCD Cosmetic
+    </h1>
+
+    <div class="metrics-header">
+        <div class="metric-card">
+            <i class="fa-solid fa-store-slash"></i>
+            <h2>01</h2>
+            <p>Cửa hàng</p>
+        </div>
+        <div class="metric-card">
+            <i class="fa-solid fa-city"></i>
+            <h2>01</h2>
+            <p>Tỉnh thành</p>
+        </div>
+        <div class="metric-card">
+            <i class="fa-solid fa-building"></i>
+            <h2>01</h2>
+            <p>Văn phòng</p>
+        </div>
+        <div class="metric-card">
+            <i class="fa-solid fa-users"></i>
+            <h2>200+</h2>
+            <p>Nhân viên</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-4">
+            <div class="store-filter-sidebar">
+                <h4>Tìm kiếm nhanh</h4>
+
+                <select class="custom-select-green" id="select-province">
+                    <option selected>Thành phố Hà Nội</option>
+                </select>
+
+                <select class="custom-select-green" id="select-district">
+                    <option selected>Quận Hoàng Mai</option>
+                </select>
+
+                <select class="custom-select-green" id="select-street">
+                    <option selected>Phường Lĩnh Nam</option>
+                </select>
+
+                <hr />
+                <h4>Danh sách Cửa hàng (1)</h4>
+
+                <div class="store-list-item">
+                    <h5>Dino Hà Nội</h5>
+                    <p><i class="fa-solid fa-location-dot me-2"></i> Ngõ 296 Lĩnh Nam, Hoàng Mai, Hà Nội</p>
+                    <p><i class="fa-solid fa-phone me-2"></i> <a href="tel:19006750">1900 6750</a></p>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="map-container">
+                <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3725.3063139984215!2d105.87323077503005!3d20.980354980656937!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3135afd765487289%3A0x21bd5839ba683d5f!2zVHLGsOG7nW5nIMSQ4bqhaSBI4buNYyBLaW5oIFThur8gS-G7uSBUaHXhuq10IEPDtG5nIE5naGnhu4dw!5e0!3m2!1svi!2sus!4v1764305309375!5m2!1svi!2sus"
+                        width="100%"
+                        height="100%"
+                        style="border:0;"
+                        allowfullscreen=""
+                        loading="lazy"
+                        referrerpolicy="no-referrer-when-downgrade">
+                </iframe>
+            </div>
+        </div>
+    </div>
+</div>
+

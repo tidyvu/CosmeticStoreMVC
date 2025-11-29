@@ -1,0 +1,41 @@
+﻿@model CosmeticStore.MVC.Models.ProductVariant
+
+@{
+    ViewData["Title"] = "Xóa phân loại sản phẩm";
+}
+
+<div class="container py-5">
+    <h1 class="mb-4 text-danger">Xóa phân loại sản phẩm</h1>
+
+    <div class="card shadow-sm border-0 p-4">
+        <h5 class="mb-3">Bạn có chắc chắn muốn xóa phân loại sản phẩm này không?</h5>
+
+        <dl class="row mb-4">
+            <dt class="col-sm-3 fw-bold">Tên phân loại</dt>
+            <dd class="col-sm-9">@Model.VariantName</dd>
+
+            <dt class="col-sm-3 fw-bold">SKU</dt>
+            <dd class="col-sm-9">@Model.Sku</dd>
+
+            <dt class="col-sm-3 fw-bold">Giá</dt>
+            <dd class="col-sm-9">@Model.Price.ToString("#,##0") đ</dd>
+
+            <dt class="col-sm-3 fw-bold">Giá khuyến mãi</dt>
+            <dd class="col-sm-9">@Model.SalePrice?.ToString("#,##0") đ</dd>
+
+            <dt class="col-sm-3 fw-bold">Số lượng tồn kho</dt>
+            <dd class="col-sm-9">@Model.StockQuantity</dd>
+
+            <dt class="col-sm-3 fw-bold">Sản phẩm</dt>
+            <dd class="col-sm-9">@Model.Product?.ProductName ?? "Chưa có"</dd>
+        </dl>
+
+        <form asp-action="Delete" method="post" onsubmit="return confirm('Bạn có chắc chắn muốn xóa phân loại sản phẩm này không?');">
+            <input type="hidden" asp-for="VariantId" />
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-danger">Xóa phân loại</button>
+                <a asp-action="Index" class="btn btn-secondary">Quay lại danh sách</a>
+            </div>
+        </form>
+    </div>
+</div>

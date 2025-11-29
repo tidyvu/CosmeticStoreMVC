@@ -1,0 +1,152 @@
+﻿@model List<CosmeticStore.MVC.Models.CartItem>
+
+@{
+    ViewData["Title"] = "Thanh toán";
+    decimal total = Model.Sum(x => x.TotalPrice);
+
+    // Định nghĩa tông màu mới
+    string brandRed = "#d14d5a";    // Đỏ San Hô đậm (Coral Red)
+    string lightPink = "#f7e6e9";  // Hồng Nhạt (Light Pink)
+}
+
+<style>
+   
+    .text-custom-primary {
+        color: @brandRed !important;
+    }
+
+    .bg-custom-light {
+        background-color: @lightPink !important;
+    }
+
+    .btn-primary-custom {
+        background-color: @brandRed !important;
+        border-color: @brandRed !important;
+        color: white;
+    }
+
+        .btn-primary-custom:hover {
+            background-color: #b03d47 !important;
+            border-color: #b03d47 !important;
+        }
+
+    /* Tiêu đề trang */
+    h2.mb-4 {
+        color: @brandRed;
+    }
+
+    /* Card Thông tin giao hàng */
+    .card-header.bg-white {
+        border-bottom: 1px solid #eee;
+    }
+
+    .card-header .fw-bold {
+        color: @brandRed;
+    }
+
+    /* Nút Hoàn tất đặt hàng */
+    .btn-checkout-complete {
+        background-color: @brandRed !important;
+        border-color: @brandRed !important;
+        color: white;
+        font-size: 1.1rem;
+        font-weight: bold;
+        transition: background-color 0.2s, border-color 0.2s;
+    }
+
+        .btn-checkout-complete:hover {
+            background-color: #b03d47 !important;
+            border-color: #b03d47 !important;
+        }
+
+    /* Card Đơn hàng của bạn */
+    .card.bg-light {
+        background-color: @lightPink !important; /* Nền card tổng cộng */
+        border: none;
+        box-shadow: 0 0 15px rgba(0,0,0,0.05);
+    }
+
+    .card-title.fw-bold {
+        color: @brandRed;
+    }
+
+    /* Tổng cộng */
+    .border-top.border-secondary {
+        border-color: #ddd !important; /* Giữ màu xám cho đường kẻ */
+    }
+
+    .h4.text-danger {
+        color: @brandRed !important; /* Tổng cộng màu Đỏ San Hô */
+    }
+
+    /* Form control */
+    .form-control {
+        border-radius: 0.3rem;
+    }
+</style>
+
+<div class="container py-5">
+    <h2 class="mb-4 text-uppercase fw-bold">Xác nhận đơn hàng</h2>
+
+    <div class="row">
+        <div class="col-md-7">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0 fw-bold">Thông tin giao hàng</h5> @* Đã điều chỉnh màu trong CSS tùy chỉnh *@
+                </div>
+                <div class="card-body">
+                    <form asp-action="Checkout" method="post">
+                        <div class="mb-3">
+                            <label class="form-label">Họ và tên người nhận</label>
+                            <input type="text" name="customerName" class="form-control" required placeholder="Nguyễn Văn A" value="@User.Identity.Name">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Số điện thoại</label>
+                            <input type="tel" name="phone" class="form-control" required placeholder="09xxx...">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Địa chỉ nhận hàng</label>
+                            <textarea name="address" class="form-control" rows="3" required placeholder="Số nhà, đường, phường/xã..."></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-checkout-complete w-100 py-2 fw-bold">
+                            @* Thay btn-success bằng btn-checkout-complete *@
+                            HOÀN TẤT ĐẶT HÀNG
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-5">
+            <div class="card bg-custom-light border-0">
+                @* Thay bg-light bằng bg-custom-light *@
+                <div class="card-body">
+                    <h5 class="card-title fw-bold mb-3">Đơn hàng của bạn</h5> @* Đã điều chỉnh màu trong CSS tùy chỉnh *@
+                    <ul class="list-group list-group-flush mb-3 rounded">
+                        @foreach (var item in Model)
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-center bg-transparent px-0">
+                                <div class="d-flex align-items-center">
+                                    <img src="@item.ImageUrl" style="width:50px; height:50px; object-fit:cover" class="rounded me-2 border">
+                                    <div>
+                                        <div class="fw-bold text-truncate" style="max-width: 150px;">@item.ProductName</div>
+                                        <small class="text-muted">x @item.Quantity</small>
+                                    </div>
+                                </div>
+                                <span class="text-muted">@item.TotalPrice.ToString("#,##0") đ</span>
+                            </li>
+                        }
+                    </ul>
+                    <div class="d-flex justify-content-between border-top pt-3">
+                        @* Đã xóa class border-secondary để dùng CSS tùy chỉnh *@
+                        <span class="h5 fw-bold text-custom-primary">Tổng cộng:</span> @* Đã thêm text-custom-primary *@
+                        <strong class="h4">@total.ToString("#,##0") đ</strong> @* Đã điều chỉnh màu trong CSS tùy chỉnh *@
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

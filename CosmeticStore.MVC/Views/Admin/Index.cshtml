@@ -1,0 +1,260 @@
+﻿@model IEnumerable<CosmeticStore.MVC.Models.Order>
+
+@{
+    ViewData["Title"] = "Tổng quan";
+    Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
+
+    // Lấy dữ liệu thực tế từ ViewBag
+    var dailyRevenueData = ViewBag.DailyRevenueData as decimal[] ?? new decimal[7];
+    var monthlyRevenueData = ViewBag.MonthlyRevenueData as decimal[] ?? new decimal[12];
+    var yearlyRevenueData = ViewBag.YearlyRevenueData as List<decimal> ?? new List<decimal>();
+    var yearlyLabels = ViewBag.YearlyLabels as List<string> ?? new List<string>();
+}
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary h-100 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-0">Tổng Đơn hàng</h6>
+                        <h2 class="fw-bold my-2">@ViewBag.TotalOrders</h2>
+                    </div>
+                    <i class="fa fa-shopping-cart fa-2x opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card text-white bg-success h-100 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-0">Doanh thu</h6>
+                        <h2 class="fw-bold my-2">@(((decimal)ViewBag.TotalRevenue).ToString("#,##0"))<small class="fs-6">đ</small></h2>
+                    </div>
+                    <i class="fa fa-money-bill-wave fa-2x opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card text-white bg-warning h-100 shadow-sm">
+            <div class="card-body text-dark">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-0">Sản phẩm</h6>
+                        <h2 class="fw-bold my-2">@ViewBag.TotalProducts</h2>
+                    </div>
+                    <i class="fa fa-box fa-2x opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card text-white bg-danger h-100 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-0">Khách hàng</h6>
+                        <h2 class="fw-bold my-2">@ViewBag.TotalCustomers</h2>
+                    </div>
+                    <i class="fa fa-users fa-2x opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<hr />
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white fw-bold">Doanh thu theo Ngày (Tuần)</div>
+            <div class="card-body">
+                <canvas id="dailyRevenueChart" style="height: 300px;"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white fw-bold">Doanh thu theo Tháng (Năm)</div>
+            <div class="card-body">
+                <canvas id="monthlyRevenueChart" style="height: 300px;"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white fw-bold">Doanh thu theo Năm</div>
+            <div class="card-body">
+                <canvas id="yearlyRevenueChart" style="height: 300px;"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<hr />
+
+<div class="card shadow-sm">
+    <div class="card-header bg-white py-3">
+        <h5 class="mb-0 fw-bold text-secondary"><i class="fa fa-clock me-2"></i>Đơn hàng vừa đặt</h5>
+    </div>
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Mã ĐH</th>
+                    <th>Khách hàng</th>
+                    <th>Ngày đặt</th>
+                    <th>Tổng tiền</th>
+                    <th>Trạng thái</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td><span class="fw-bold text-primary">#@item.OrderId</span></td>
+                        <td>@item.CustomerName</td>
+                        <td>@item.OrderDate?.ToString("dd/MM HH:mm")</td>
+                        <td class="fw-bold text-danger">@item.TotalAmount.ToString("#,##0") đ</td>
+                        <td>
+                            @if (item.Status == "Pending")
+                            {
+                                <span class="badge bg-warning text-dark">Chờ xử lý</span>
+                            }
+                            else if (item.Status == "Shipped")
+                            {
+                                <span class="badge bg-primary">Đang giao</span>
+                            }
+                            else if (item.Status == "Completed")
+                            {
+                                <span class="badge bg-success">Hoàn thành</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">@item.Status</span>
+                            }
+                        </td>
+                        <td class="text-end">
+                            <a asp-controller="AdminOrders" asp-action="Details" asp-route-id="@item.OrderId" class="btn btn-sm btn-outline-secondary">
+                                Xem
+                            </a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="card-footer bg-white text-center">
+        <a asp-controller="AdminOrders" asp-action="Index" class="text-decoration-none fw-bold">Xem tất cả đơn hàng &rarr;</a>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+<script>
+    // Dữ liệu từ ViewBag được đưa vào JS
+    const dailyData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(dailyRevenueData));
+    const monthlyData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(monthlyRevenueData));
+    const yearlyData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(yearlyRevenueData));
+    const yearlyLabelsJs = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(yearlyLabels));
+
+    // Hàm định dạng số tiền (ví dụ: 1000000 -> 1.000.000 đ)
+    function formatCurrency(value) {
+        return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") + ' đ';
+    }
+
+    // Cấu hình biểu đồ chung (Base Config)
+    const baseConfig = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: false
+            },
+            tooltip: {
+                callbacks: {
+                    label: function (context) {
+                        return 'Doanh thu: ' + formatCurrency(context.raw);
+                    }
+                }
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                title: {
+                    display: true,
+                    text: 'Doanh thu (VNĐ)'
+                },
+                ticks: {
+                    callback: function (value, index, ticks) {
+                        // Hiển thị giá trị lớn dưới dạng triệu (M) hoặc tỷ (B)
+                        if (value >= 1000000000) return (value / 1000000000).toFixed(1) + ' Tỷ';
+                        if (value >= 1000000) return (value / 1000000) + ' Tr';
+                        return formatCurrency(value);
+                    }
+                }
+            }
+        }
+    };
+
+    // 1. BIỂU ĐỒ DOANH THU THEO NGÀY TRONG TUẦN (BAR CHART)
+    new Chart(document.getElementById('dailyRevenueChart'), {
+        type: 'bar',
+        data: {
+            // Thứ tự đã được sắp xếp trong Controller (Thứ Hai -> Chủ Nhật)
+            labels: ['Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy', 'Chủ Nhật'],
+            datasets: [{
+                label: 'Doanh thu',
+                data: dailyData,
+                backgroundColor: '#0d6efd', // Blue primary
+                borderColor: '#0d6efd',
+                borderWidth: 1
+            }]
+        },
+        options: baseConfig
+    });
+
+    // 2. BIỂU ĐỒ DOANH THU THEO THÁNG TRONG NĂM (LINE CHART)
+    new Chart(document.getElementById('monthlyRevenueChart'), {
+        type: 'line',
+        data: {
+            labels: ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12'],
+            datasets: [{
+                label: 'Doanh thu',
+                data: monthlyData,
+                backgroundColor: 'rgba(25, 135, 84, 0.5)', // Green success (with transparency)
+                borderColor: '#198754',
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: baseConfig
+    });
+
+    // 3. BIỂU ĐỒ DOANH THU THEO TỪNG NĂM (BAR CHART)
+    new Chart(document.getElementById('yearlyRevenueChart'), {
+        type: 'bar',
+        data: {
+            labels: yearlyLabelsJs,
+            datasets: [{
+                label: 'Doanh thu',
+                data: yearlyData,
+                backgroundColor: '#fd7e14', // Orange warning
+                borderColor: '#fd7e14',
+                borderWidth: 1
+            }]
+        },
+        options: baseConfig
+    });
+</script>

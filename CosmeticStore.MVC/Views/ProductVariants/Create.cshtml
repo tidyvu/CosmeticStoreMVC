@@ -1,0 +1,57 @@
+﻿@model CosmeticStore.MVC.Models.ProductVariant
+
+<div class="container py-5">
+    @{
+        ViewData["Title"] = "Tạo phân loại cho: " + ViewBag.ProductName;
+    }
+
+    <h1 class="mb-4 text-primary">Tạo phân loại sản phẩm cho: @ViewBag.ProductName</h1>
+
+    <div class="card shadow-sm border-0 p-4">
+        <form asp-action="Create" method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+            <input type="hidden" asp-for="ProductId" />
+
+            <div class="mb-3">
+                <label asp-for="VariantName" class="form-label fw-bold">Tên phân loại</label>
+                <input asp-for="VariantName" class="form-control" placeholder="Nhập tên phân loại..." />
+                <span asp-validation-for="VariantName" class="text-danger"></span>
+            </div>
+
+
+            <div class="mb-3">
+                <label asp-for="Sku" class="form-label fw-bold">SKU</label>
+                <input asp-for="Sku" class="form-control" placeholder="Nhập mã SKU..." />
+                <span asp-validation-for="Sku" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Price" class="form-label fw-bold">Giá gốc</label>
+                <input asp-for="Price" type="number" step="1000" min="0" class="form-control" placeholder="Nhập giá gốc..." />
+                <span asp-validation-for="Price" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="SalePrice" class="form-label fw-bold">Giá khuyến mãi</label>
+                <input asp-for="SalePrice" type="number" step="1000" min="0" class="form-control" placeholder="Nhập giá khuyến mãi..." />
+                <span asp-validation-for="SalePrice" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="StockQuantity" class="form-label fw-bold">Số lượng tồn kho</label>
+                <input asp-for="StockQuantity" type="number" min="0" class="form-control" placeholder="Nhập số lượng..." />
+                <span asp-validation-for="StockQuantity" class="text-danger"></span>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary flex-grow-1">Tạo phân loại</button>
+                <a asp-action="Index" asp-route-productId="@Model.ProductId" class="btn btn-secondary flex-grow-1">Quay lại danh sách</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @await Html.PartialAsync("_ValidationScriptsPartial")
+}

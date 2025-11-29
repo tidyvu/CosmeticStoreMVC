@@ -1,0 +1,56 @@
+﻿@model CosmeticStore.MVC.Models.Brand
+
+@{
+    ViewData["Title"] = "Chỉnh sửa Thương Hiệu: " + Model.BrandName;
+}
+
+<div class="container py-5" style="max-width: 550px;">
+    <div class="card shadow-lg border-0">
+        <div class="card-header bg-warning text-white text-center">
+            <h3 class="mb-0">Chỉnh sửa Thương Hiệu</h3>
+        </div>
+
+        <div class="card-body">
+
+            <form asp-action="Edit" enctype="multipart/form-data">
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                <input type="hidden" asp-for="BrandId" />
+                <input type="hidden" asp-for="LogoUrl" />
+
+                <div class="mb-3">
+                    <label asp-for="BrandName" class="form-label fw-bold"></label>
+                    <input asp-for="BrandName" class="form-control" placeholder="Nhập tên thương hiệu..." />
+                    <span asp-validation-for="BrandName" class="text-danger"></span>
+                </div>
+
+                @if (!string.IsNullOrEmpty(Model.LogoUrl))
+                {
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Logo hiện tại:</label><br />
+                        <img src="@Model.LogoUrl" alt="@Model.BrandName" class="img-thumbnail" style="max-width: 150px;" />
+                    </div>
+                }
+
+                <div class="mb-3">
+                    <label for="LogoFile" class="form-label fw-bold">Tải lên Logo mới (Tùy chọn)</label>
+                    <input type="file" name="LogoFile" id="LogoFile" class="form-control" accept="image/*" />
+                    <span asp-validation-for="LogoUrl" class="text-danger"></span>
+                    <small class="form-text text-muted">Chọn file ảnh mới để thay thế Logo hiện tại.</small>
+                </div>
+
+                <div class="d-flex justify-content-between mt-4">
+                    <a asp-action="Index" class="btn btn-secondary"> Quay lại</a>
+                    <button type="submit" class="btn btn-success"> Lưu</button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

@@ -1,0 +1,41 @@
+﻿@model CosmeticStore.MVC.Models.Brand
+
+@{
+    ViewData["Title"] = "Brand Details";
+}
+
+<div class="container py-5" style="max-width: 600px;">
+    <div class="card shadow-lg border-0">
+        <div class="card-header bg-info text-white text-center">
+            <h3 class="mb-0">Thông tin thương hiệu</h3>
+        </div>
+
+        <div class="card-body">
+            <dl class="row mb-3">
+                <dt class="col-sm-4 fw-bold">Tên thương hiệu:</dt>
+                <dd class="col-sm-8">@Html.DisplayFor(model => model.BrandName)</dd>
+
+                <dt class="col-sm-4 fw-bold">Logo:</dt>
+                <dd class="col-sm-8">
+                    @if (!string.IsNullOrEmpty(Model.LogoUrl))
+                    {
+                        <img src="@Model.LogoUrl" alt="@Model.BrandName" class="img-thumbnail" style="max-width: 200px;" />
+                    }
+                    else
+                    {
+                        <span class="text-muted">Chưa có logo</span>
+                    }
+                </dd>
+            </dl>
+
+            <div class="d-flex justify-content-between mt-4">
+                <a asp-action="Edit" asp-route-id="@Model?.BrandId" class="btn btn-primary">
+                    <i class="fa-solid fa-pen-to-square me-1"></i> Chỉnh sửa
+                </a>
+                <a asp-action="Index" class="btn btn-secondary">
+                    <i class="fa-solid fa-arrow-left me-1"></i> Quay lại
+                </a>
+            </div>
+        </div>
+    </div>
+</div>

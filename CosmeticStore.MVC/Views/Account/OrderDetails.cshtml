@@ -1,0 +1,55 @@
+﻿@model CosmeticStore.MVC.Models.Order
+
+@{
+    ViewData["Title"] = "Chi tiết đơn #" + Model.OrderId;
+}
+
+<div class="container py-5">
+    <a asp-action="MyOrders" class="text-decoration-none mb-3 d-inline-block">&larr; Quay lại danh sách</a>
+
+    <div class="card">
+        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+            <span>Đơn hàng #@Model.OrderId</span>
+            <span class="badge bg-warning text-dark">@Model.Status</span>
+        </div>
+        <div class="card-body">
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <h6 class="fw-bold">Địa chỉ nhận hàng</h6>
+                    <p class="mb-1">@Model.CustomerName</p>
+                    <p class="mb-1">@Model.CustomerPhone</p>
+                    <p class="mb-1 text-muted">@Model.ShippingAddress</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <p class="text-muted small">Ngày đặt: @Model.OrderDate?.ToString("dd/MM/yyyy HH:mm")</p>
+                </div>
+            </div>
+
+            <table class="table border-top">
+                <tbody>
+                    @foreach (var item in Model.OrderDetails)
+                    {
+                        var product = item.Variant?.Product;
+                        <tr>
+                            <td style="width: 70px;">
+                                <img src="@(product?.MainImageUrl ?? "https://via.placeholder.com/50")" width="60" height="60" class="rounded border" style="object-fit:cover" />
+                            </td>
+                            <td>
+                                <p class="mb-0 fw-bold">@product?.ProductName</p>
+                                <small class="text-muted">Phân loại: @item.Variant?.VariantName</small>
+                            </td>
+                            <td class="text-center">x @item.Quantity</td>
+                            <td class="text-end fw-bold">@((item.Quantity * item.UnitPrice).ToString("#,##0")) đ</td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot class="bg-light">
+                    <tr>
+                        <td colspan="3" class="text-end fw-bold">TỔNG CỘNG:</td>
+                        <td class="text-end fw-bold text-danger fs-5">@Model.TotalAmount.ToString("#,##0") đ</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>

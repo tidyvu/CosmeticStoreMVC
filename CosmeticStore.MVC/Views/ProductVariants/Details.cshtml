@@ -1,0 +1,50 @@
+﻿@model CosmeticStore.MVC.Models.ProductVariant
+
+@{
+    ViewData["Title"] = "Chi tiết phân loại sản phẩm";
+}
+
+<div class="container py-5">
+    <h1 class="mb-4 text-primary">Chi tiết phân loại sản phẩm</h1>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body">
+            <dl class="row mb-4">
+                <dt class="col-sm-3 fw-bold">Tên phân loại</dt>
+                <dd class="col-sm-9">@Model.VariantName</dd>
+
+                <dt class="col-sm-3 fw-bold">SKU</dt>
+                <dd class="col-sm-9">@Model.Sku</dd>
+
+                <dt class="col-sm-3 fw-bold">Giá</dt>
+                <dd class="col-sm-9">@Model.Price.ToString("#,##0") đ</dd>
+
+                <dt class="col-sm-3 fw-bold">Giá khuyến mãi</dt>
+                <dd class="col-sm-9">@Model.SalePrice?.ToString("#,##0") đ</dd>
+
+                <dt class="col-sm-3 fw-bold">Số lượng tồn kho</dt>
+                <dd class="col-sm-9">@Model.StockQuantity</dd>
+
+                <dt class="col-sm-3 fw-bold">Sản phẩm</dt>
+                <dd class="col-sm-9">@Model.Product?.ProductName ?? "Chưa có"</dd>
+            </dl>
+
+            <div class="d-flex gap-2">
+                <a asp-action="Edit" asp-route-id="@Model?.VariantId" class="btn btn-primary">Chỉnh sửa</a>
+                <a asp-action="Index" class="btn btn-secondary">Quay lại danh sách</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    dt {
+        font-weight: 600;
+        color: #555;
+    }
+
+    dd {
+        margin-bottom: 0.75rem;
+        color: #333;
+    }
+</style>
