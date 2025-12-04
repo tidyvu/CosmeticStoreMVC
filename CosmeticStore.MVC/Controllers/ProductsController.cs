@@ -25,36 +25,73 @@ namespace CosmeticStore.MVC.Controllers
         }
 
         // GET: Products (Danh sách sản phẩm - đã có lọc và phân trang)
-        public async Task<IActionResult> Index(string searchString, int? categoryId, int? brandId, int? pageNumber)
+        public async Task<IActionResult> Index(
+            string sortOrder,
+            string currentFilter,
+            string searchString,
+            decimal? minPrice,
+            decimal? maxPrice,
+            int? pageNumber)
         {
+            ViewData["CurrentSort"] = sortOrder;
+            ViewData["NameSortParm"] = String.IsNullOrEmpty(sortOrder) ? "name_desc" : "";
+            ViewData["PriceSortParm"] = sortOrder == "Price" ? "price_desc" : "Price";
+
+            if (searchString != null)
+            {
+                pageNumber = 1;
+            }
+            else
+            {
+                searchString = currentFilter;
+            }
+
+            ViewData["CurrentFilter"] = searchString;
+            ViewData["MinPrice"] = minPrice; 
+            ViewData["MaxPrice"] = maxPrice;
+
             var products = _context.Products
-                .Include(p => p.ProductVariants)
-                .Include(p => p.Category)
                 .Include(p => p.Brand)
+                .Include(p => p.Category)
+                .Include(p => p.ProductVariants) 
                 .AsQueryable();
 
-            if (!string.IsNullOrEmpty(searchString))
+            // 1. Tìm kiếm theo tên
+            if (!String.IsNullOrEmpty(searchString))
             {
-                products = products.Where(p => p.ProductName.Contains(searchString));
-            }
-            if (categoryId.HasValue)
-            {
-                products = products.Where(p => p.CategoryId == categoryId);
-            }
-            if (brandId.HasValue)
-            {
-                products = products.Where(p => p.BrandId == brandId);
+                products = products.Where(s => s.ProductName.Contains(searchString));
             }
 
-            ViewBag.Categories = await _context.Categories.ToListAsync();
-            ViewBag.Brands = await _context.Brands.ToListAsync();
-            ViewBag.CurrentCategory = categoryId;
-            ViewBag.CurrentBrand = brandId;
-            ViewData["CurrentFilter"] = searchString;
+            // 2. Lọc theo giá (Dựa trên giá của biến thể đầu tiên hoặc bất kỳ biến thể nào)
+            if (minPrice.HasValue)
+            {
+                products = products.Where(p => p.ProductVariants.Any(v => (v.SalePrice ?? v.Price) >= minPrice.Value));
+            }
 
-            int pageSize = 9;
+            if (maxPrice.HasValue)
+            {
+                products = products.Where(p => p.ProductVariants.Any(v => (v.SalePrice ?? v.Price) <= maxPrice.Value));
+            }
 
-            return View(await PaginatedList<Product>.CreateAsync(products.OrderBy(p => p.ProductId), pageNumber ?? 1, pageSize));
+            // 3. Sắp xếp
+            switch (sortOrder)
+            {
+                case "name_desc":
+                    products = products.OrderByDescending(s => s.ProductName);
+                    break;
+                case "Price":
+                    products = products.OrderBy(s => s.ProductVariants.Min(v => v.SalePrice ?? v.Price));
+                    break;
+                case "price_desc":
+                    products = products.OrderByDescending(s => s.ProductVariants.Min(v => v.SalePrice ?? v.Price));
+                    break;
+                default:
+                    products = products.OrderBy(s => s.ProductName);
+                    break;
+            }
+
+            int pageSize = 9; // Hiển thị 9 sản phẩm mỗi trang
+            return View(await PaginatedList<Product>.CreateAsync(products.AsNoTracking(), pageNumber ?? 1, pageSize));
         }
 
         // GET: Products/Details/5 (Chi tiết sản phẩm)

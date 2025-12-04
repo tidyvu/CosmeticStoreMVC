@@ -1,7 +1,7 @@
 ﻿@model CosmeticStore.MVC.Models.Order
 
-@{ 
-    ViewData["Title"] = "Chi tiết đơn hàng #" + Model.OrderId; 
+@{
+    ViewData["Title"] = "Chi tiết đơn hàng #" + Model.OrderId;
     Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
 }
 
@@ -20,19 +20,105 @@
                     <p><strong>SĐT:</strong> @Model.CustomerPhone</p>
                     <p><strong>Địa chỉ:</strong> @Model.ShippingAddress</p>
                     <p><strong>Ngày đặt:</strong> @Model.OrderDate?.ToString("dd/MM/yyyy HH:mm")</p>
-                    
-                    <hr/>
-                    <form asp-action="UpdateStatus" method="post">
-                        <input type="hidden" name="orderId" value="@Model.OrderId" />
-                        <label class="form-label fw-bold">Cập nhật trạng thái:</label>
-                        <select name="status" class="form-select mb-2">
-                            <option value="Pending" selected="@(Model.Status == "Pending")">Chờ xử lý</option>
-                            <option value="Shipped" selected="@(Model.Status == "Shipped")">Đang giao hàng</option>
-                            <option value="Completed" selected="@(Model.Status == "Completed")">Hoàn thành</option>
-                            <option value="Cancelled" selected="@(Model.Status == "Cancelled")">Đã hủy</option>
-                        </select>
-                        <button type="submit" class="btn btn-primary w-100">Cập nhật</button>
-                    </form>
+
+                   
+
+                    <hr />
+
+                    <div class="mb-3 text-center">
+                        <label class="form-label d-block text-muted small">Trạng thái đơn hàng</label>
+                        @if (Model.Status == "Pending")
+                        {
+                            <span class="badge bg-warning text-dark fs-5 px-4 py-2">Chờ xử lý</span>
+                        }
+                        @if (Model.Status == "Paid")
+                        {
+                            <span class="badge bg-warning text-dark fs-5 px-4 py-2">Đơn hàng đã thanh toán</span>
+                        }
+                        else if (Model.Status == "Processing")
+                        {
+                            <span class="badge bg-info text-white fs-5 px-4 py-2">Đang đóng gói</span>
+                        }
+                        else if (Model.Status == "Shipped")
+                        {
+                            <span class="badge bg-primary fs-5 px-4 py-2">Đang giao hàng</span>
+                        }
+                        else if (Model.Status == "Completed")
+                        {
+                            <span class="badge bg-success fs-5 px-4 py-2">Hoàn thành</span>
+                        }
+                        else if (Model.Status == "Cancelled")
+                        {
+                            <span class="badge bg-danger fs-5 px-4 py-2">Đã hủy</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary fs-5 px-4 py-2">@Model.Status</span>
+                        }
+                    </div>
+
+                    <hr />
+
+                    <div class="mb-3 text-center">
+                        <label class="form-label fw-bold d-block">Hành động:</label>
+                        <div class="d-flex flex-column gap-2">
+                            @{
+                                string nextStatus = "";
+                                string nextStatusText = "";
+                                string nextStatusClass = "btn-primary";
+                            }
+
+                            @if (Model.Status == "Pending" || Model.Status == "Paid")
+                            {
+                                nextStatus = "Processing";
+                                nextStatusText = "Chuyển sang Đang đóng gói";
+                            }
+                            else if (Model.Status == "Processing")
+                            {
+                                nextStatus = "Shipped";
+                                nextStatusText = "Chuyển sang Đang giao hàng";
+                            }
+                            else if (Model.Status == "Shipped")
+                            {
+                                nextStatus = "Completed";
+                                nextStatusText = "Đánh dấu Hoàn thành";
+                                nextStatusClass = "btn-success";
+                            }
+
+                            @if (!string.IsNullOrEmpty(nextStatus))
+                            {
+                                <form asp-action="UpdateStatus" method="post" onsubmit="return confirm('Bạn có chắc muốn chuyển trạng thái đơn hàng sang @nextStatusText không?');">
+                                    <input type="hidden" name="id" value="@Model.OrderId" />
+                                    <input type="hidden" name="status" value="@nextStatus" />
+                                    <button type="submit" class="btn @nextStatusClass w-100 fw-bold py-2">
+                                        @nextStatusText
+                                    </button>
+                                </form>
+                            }
+
+                            @if (Model.Status != "Completed" && Model.Status != "Cancelled")
+                            {
+                                <hr class="my-1" />
+                                <form asp-action="UpdateStatus" method="post" onsubmit="return confirm('CẢNH BÁO: Việc hủy đơn sẽ hoàn lại số lượng sản phẩm vào kho. Bạn có chắc chắn muốn HỦY ĐƠN HÀNG này không?');">
+                                    <input type="hidden" name="id" value="@Model.OrderId" />
+                                    <input type="hidden" name="status" value="Cancelled" />
+                                    <button type="submit" class="btn btn-outline-danger w-100 fw-bold py-2">
+                                        Hủy đơn & Hoàn kho
+                                    </button>
+                                </form>
+
+                                <div class="form-text text-danger mt-2 small text-start">
+                                    Lưu ý: Thao tác này sẽ cập nhật lại số lượng tồn kho.
+                                </div>
+                            }
+                            else if (string.IsNullOrEmpty(nextStatus))
+                            {
+                                <div class="alert alert-light text-center border mt-2 py-3 small">
+                                    Đơn hàng đã @(Model.Status == "Completed" ? "Hoàn thành" : "bị Hủy"). Không thể cập nhật thêm.
+                                </div>
+                            }
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -57,15 +143,16 @@
 
                             <tr>
                                 <td>
-                                    <div class="d-flex align-items-center">
+                                    <a asp-controller="Products" asp-action="Details" asp-route-id="@product?.ProductId"
+                                       class="d-flex align-items-center text-decoration-none text-dark">
                                         <img src="@(product?.MainImageUrl ?? "https://via.placeholder.com/50")"
-                                             width="50" height="50" style="object-fit:cover" class="me-2 border" />
+                                             width="50" height="50" style="object-fit:cover" class="me-2 border rounded" />
                                         <div>
                                             <span class="fw-bold">@product?.ProductName</span>
                                             <br />
                                             <small class="text-muted">Phân loại: @variantName</small>
                                         </div>
-                                    </div>
+                                    </a>
                                 </td>
                                 <td>@item.UnitPrice.ToString("#,##0") đ</td>
                                 <td>x @item.Quantity</td>

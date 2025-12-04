@@ -4,17 +4,14 @@
     ViewData["Title"] = "Giỏ hàng của bạn";
     decimal grandTotal = Model.Sum(x => x.TotalPrice);
 
-    // Định nghĩa tông màu mới
-    string brandRed = "#d14d5a";    // Đỏ San Hô đậm (Coral Red)
-    string lightPink = "#f7e6e9";  // Hồng Nhạt (Light Pink)
+    // Định nghĩa tông màu (Coral Red Theme)
+    string brandRed = "#d14d5a";
+    string lightPink = "#f7e6e9";
 }
 
 <style>
-    /* ------------------------------------------------------------------ */
-    /* CSS TÙY CHỈNH THEO TÔNG ĐỎ SAN HÔ */
-    /* ------------------------------------------------------------------ */
+    /* --- CSS TÙY CHỈNH THEO TÔNG ĐỎ SAN HÔ --- */
 
-    /* Màu tùy chỉnh chung */
     .text-custom-primary {
         color: @brandRed !important;
     }
@@ -23,69 +20,14 @@
         background-color: @lightPink !important;
     }
 
-    .btn-primary-custom {
-        background-color: @brandRed !important;
-        border-color: @brandRed !important;
-        color: white;
-    }
-
-        .btn-primary-custom:hover {
-            background-color: #b03d47 !important;
-            border-color: #b03d47 !important;
-        }
-
-    .btn-outline-custom-secondary {
-        color: #6c757d !important; /* Giữ màu xám cho nút outline */
-        border-color: #6c757d !important;
-    }
-
-        .btn-outline-custom-secondary:hover {
-            background-color: #6c757d !important;
-            color: white !important;
-        }
-
-    /* Tiêu đề */
-    h2.mb-4 {
-        color: @brandRed;
-        font-weight: bold;
-    }
-
-    /* Bảng sản phẩm */
-    .table .item-price,
-    .table .item-total-price {
-        color: @brandRed !important;
-        font-weight: bold;
-    }
-
-    .table .remove-item-btn {
-        color: @brandRed !important; /* Nút xóa màu Đỏ San Hô */
-        text-decoration: none;
-        transition: color 0.2s ease-in-out;
-    }
-
-        .table .remove-item-btn:hover {
-            color: #b03d47 !important; /* Đỏ San Hô đậm hơn khi hover */
-        }
-
-    /* Tổng cộng và nút thanh toán */
-    #grand-total-display {
-        color: @brandRed !important; /* Tổng cộng màu Đỏ San Hô */
-    }
-
-    /* Card tổng cộng */
-    .card.bg-light {
-        background-color: @lightPink !important; /* Nền card tổng cộng */
-        border: none;
-        box-shadow: 0 0 15px rgba(0,0,0,0.05);
-    }
-
-    /* Nút Thanh Toán */
+    /* Nút chính */
     .btn-checkout-custom {
         background-color: @brandRed !important;
         border-color: @brandRed !important;
         color: white;
         font-size: 1.1rem;
         font-weight: bold;
+        transition: all 0.3s;
     }
 
         .btn-checkout-custom:hover {
@@ -93,93 +35,153 @@
             border-color: #b03d47 !important;
         }
 
-    /* Loading spinner */
-    #loading-spinner .fa-spinner {
+    /* Tiêu đề & Giá */
+    h2.cart-title {
+        color: @brandRed;
+        font-weight: bold;
+    }
+
+    .item-price, .item-total-price {
+        color: @brandRed !important;
+        font-weight: bold;
+    }
+
+    #grand-total-display {
         color: @brandRed !important;
     }
 
-    /* Form control */
-    .form-control {
-        border-radius: 0.3rem;
+    /* Nút xóa */
+    .remove-item-btn {
+        color: #dc3545 !important;
+        text-decoration: none;
+        cursor: pointer;
+        transition: color 0.2s;
+    }
+
+        .remove-item-btn:hover {
+            color: #a71d2a !important;
+            text-decoration: underline;
+        }
+
+    /* Input số lượng */
+    .quantity-input {
+        width: 70px;
+        text-align: center;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+    }
+
+    /* Loading Overlay */
+    #loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.7);
+        z-index: 9999;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+    }
+
+    .spinner-custom {
+        color: @brandRed;
     }
 </style>
 
+<div id="loading-overlay" class="d-none">
+    <div class="spinner-border spinner-custom" role="status" style="width: 3rem; height: 3rem;">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+    <div class="mt-2 fw-bold" style="color: @brandRed">Đang xử lý...</div>
+</div>
+
 <div class="container py-5">
-    <h2 class="mb-4">Giỏ hàng (@Model.Count sản phẩm)</h2>
+    <h2 class="mb-4 cart-title">Giỏ hàng (@Model.Count sản phẩm)</h2>
 
     @if (Model.Count == 0)
     {
-        <div class="alert alert-info">Giỏ hàng của bạn đang trống. <a asp-controller="Products" asp-action="Index" class="text-custom-primary fw-bold">Mua sắm ngay</a></div>
+        <div class="alert alert-info text-center py-5">
+            <i class="fa fa-shopping-basket fa-3x mb-3 text-muted"></i>
+            <h4>Giỏ hàng của bạn đang trống</h4>
+            <p>Hãy chọn những sản phẩm yêu thích để thêm vào giỏ hàng nhé!</p>
+            <a asp-controller="Products" asp-action="Index" class="btn btn-checkout-custom mt-3">Mua sắm ngay</a>
+        </div>
     }
     else
     {
         <div class="row">
-            <div class="col-md-8">
-                <table class="table align-middle">
-                    <thead>
-                        <tr>
-                            <th>Sản phẩm</th>
-                            <th>Giá</th>
-                            <th>Số lượng</th>
-                            <th>Thành tiền</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody id="cart-items-body">
-                        @foreach (var item in Model)
-                        {
-                            <tr data-product-id="@item.ProductId" data-variant-id="@item.VariantId" class="cart-item-row">
-                                <td>
-                                    <div class="d-flex align-items-center">
-                                        <img src="@item.ImageUrl" width="50" height="50" style="object-fit:cover" class="me-3 rounded" />
-                                        <div>
-                                            <a asp-controller="Products" asp-action="Details" asp-route-id="@item.ProductId" class="text-dark fw-bold text-decoration-none">
-                                                @item.ProductName
-                                            </a>
-                                            @if (!string.IsNullOrEmpty(item.VariantName))
-                                            {
-                                                <div class="small text-muted">Phân loại: @item.VariantName</div>
-                                            }
-                                        </div>
-                                    </div>
-                                </td>
-                                <td><span class="item-price">@item.Price.ToString("#,##0")</span> đ</td>
-                                <td>
-                                    <input type="number"
-                                           value="@item.Quantity"
-                                           class="form-control form-control-sm quantity-input"
-                                           data-product-id="@item.ProductId"
-                                           data-variant-id="@item.VariantId"
-                                           min="1"
-                                           style="width: 70px" />
-                                </td>
-                                <td class="fw-bold"><span class="item-total-price">@item.TotalPrice.ToString("#,##0")</span> đ</td> @* Đã điều chỉnh màu trong CSS tùy chỉnh *@
-                                <td>
-                                    <a href="#" class="remove-item-btn" @* Đã điều chỉnh màu trong CSS tùy chỉnh *@
-                                       data-product-id="@item.ProductId" data-variant-id="@item.VariantId">
-                                        <i class="fa fa-trash"></i> Xóa
-                                    </a>
-                                </td>
+            <div class="col-lg-8">
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Sản phẩm</th>
+                                <th>Đơn giá</th>
+                                <th>Số lượng</th>
+                                <th>Thành tiền</th>
+                                <th></th>
                             </tr>
-                        }
-                    </tbody>
-                </table>
-                <div id="loading-spinner" class="text-center d-none">
-                    <i class="fa fa-spinner fa-spin fa-2x"></i> Đang cập nhật... @* Đã điều chỉnh màu trong CSS tùy chỉnh *@
+                        </thead>
+                        <tbody id="cart-items-body">
+                            @foreach (var item in Model)
+                            {
+                                <tr data-product-id="@item.ProductId" data-variant-id="@item.VariantId" class="cart-item-row border-bottom">
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <img src="@item.ImageUrl" width="60" height="60" style="object-fit:cover" class="me-3 rounded border" />
+                                            <div>
+                                                <a asp-controller="Products" asp-action="Details" asp-route-id="@item.ProductId" class="text-dark fw-bold text-decoration-none">
+                                                    @item.ProductName
+                                                </a>
+                                                @if (!string.IsNullOrEmpty(item.VariantName))
+                                                {
+                                                    <div class="small text-muted">Phân loại: @item.VariantName</div>
+                                                }
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td><span class="item-price">@item.Price.ToString("#,##0")</span> đ</td>
+                                    <td>
+                                        <input type="number"
+                                               value="@item.Quantity"
+                                               class="form-control quantity-input"
+                                               data-product-id="@item.ProductId"
+                                               data-variant-id="@item.VariantId"
+                                               min="1"
+                                               onkeydown="return false" @* Chặn nhập chữ *@ />
+                                    </td>
+                                    <td class="fw-bold"><span class="item-total-price">@item.TotalPrice.ToString("#,##0")</span> đ</td>
+                                    <td class="text-end">
+                                        <a href="javascript:void(0)" class="remove-item-btn"
+                                           data-product-id="@item.ProductId" data-variant-id="@item.VariantId">
+                                            <i class="fa fa-trash"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
                 </div>
             </div>
-            <div class="col-md-4">
-                <div class="card bg-custom-light">
-                    @* Thay bg-light bằng bg-custom-light *@
+
+            <div class="col-lg-4">
+                <div class="card bg-custom-light border-0 shadow-sm sticky-top" style="top: 20px; z-index: 1;">
                     <div class="card-body">
-                        <h4 class="text-custom-primary">Tổng cộng</h4> @* Tiêu đề Tổng cộng *@
-                        <h3 class="fw-bold" id="grand-total-display">@grandTotal.ToString("#,##0") đ</h3> @* Đã điều chỉnh màu trong CSS tùy chỉnh *@
+                        <h4 class="text-custom-primary mb-3">Tổng đơn hàng</h4>
+                        <div class="d-flex justify-content-between mb-3">
+                            <span class="fw-bold">Tạm tính:</span>
+                            <span class="fw-bold" id="grand-total-display">@grandTotal.ToString("#,##0") đ</span>
+                        </div>
                         <hr />
-                        <a asp-action="Checkout" class="btn btn-checkout-custom w-100 py-2 fw-bold">
-                            @* Thay btn-success bằng btn-checkout-custom *@
-                            THANH TOÁN
+                        <a asp-action="Checkout" class="btn btn-checkout-custom w-100 py-3 mb-2 shadow-sm">
+                            TIẾN HÀNH THANH TOÁN
                         </a>
-                        <a asp-controller="Products" asp-action="Index" class="btn btn-outline-custom-secondary w-100 mt-2">Tiếp tục mua hàng</a> @* Thay btn-outline-secondary bằng btn-outline-custom-secondary *@
+                        <a asp-controller="Products" asp-action="Index" class="btn btn-outline-secondary w-100">
+                            <i class="fa fa-arrow-left"></i> Tiếp tục mua hàng
+                        </a>
                     </div>
                 </div>
             </div>
@@ -189,127 +191,114 @@
 
 @section Scripts {
     <script>
+        // 1. Hàm định dạng tiền tệ (VNĐ)
         function formatCurrency(number) {
-            const num = parseFloat(number);
-            if (isNaN(num)) return '0'; // Trả về số 0 nếu không phải số
-            return num.toLocaleString('vi-VN');
+            return new Intl.NumberFormat('vi-VN', { style: 'decimal', maximumFractionDigits: 0 }).format(number);
         }
 
-        function updateGrandTotalDisplay(newTotal) {
-            document.getElementById('grand-total-display').textContent = formatCurrency(newTotal) + ' đ';
-        }
-
+        // 2. Hiển thị / Ẩn Loading
         function toggleLoading(show) {
-            document.getElementById('loading-spinner').classList.toggle('d-none', !show);
+            const overlay = document.getElementById('loading-overlay');
+            if (show) overlay.classList.remove('d-none');
+            else overlay.classList.add('d-none');
         }
 
+        // 3. Xử lý sự kiện thay đổi số lượng (Chỉ dùng 'change' để tránh double request)
         function handleQuantityChange(event) {
             const input = event.target;
             const productId = input.getAttribute('data-product-id');
             const variantId = input.getAttribute('data-variant-id');
+
             let newQuantity = parseInt(input.value);
-            const minQuantity = parseInt(input.min) || 1;
-
-            if (isNaN(newQuantity) || newQuantity < minQuantity) {
-                newQuantity = minQuantity;
-                input.value = minQuantity;
-            }
+            if (isNaN(newQuantity) || newQuantity < 1) newQuantity = 1;
 
             toggleLoading(true);
 
-            // Cần Action /Cart/UpdateQuantity trên Controller
             fetch(`/Cart/UpdateQuantity?productId=${productId}&variantId=${variantId}&quantity=${newQuantity}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            })
-            .then(response => {
-                if (!response.ok) throw new Error('Lỗi cập nhật giỏ hàng.');
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    const row = input.closest('.cart-item-row');
-                    if (row && data.newTotalPrice !== undefined) {
-                        row.querySelector('.item-total-price').textContent = formatCurrency(data.newTotalPrice);
-                    }
-
-                    if (data.grandTotal !== undefined) {
-                        updateGrandTotalDisplay(data.grandTotal);
-                    }
-
-                    // Cập nhật lại giá trị input
-                    input.value = data.newQuantity;
-                } else {
-                    alert(data.message || "Cập nhật thất bại.");
-                }
-            })
-            .catch(error => {
-                console.error(error);
-                alert('Có lỗi xảy ra khi kết nối. Vui lòng thử lại.');
-            })
-            .finally(() => {
-                toggleLoading(false);
-            });
-        }
-
-        function handleRemoveItem(event) {
-            event.preventDefault();
-
-            if (!confirm("Bạn có chắc chắn muốn xóa sản phẩm này khỏi giỏ hàng?")) return;
-
-            const link = event.currentTarget;
-            const productId = link.getAttribute('data-product-id');
-            const variantId = link.getAttribute('data-variant-id');
-            const row = link.closest('.cart-item-row');
-
-            toggleLoading(true);
-
-            // Cần Action /Cart/Remove trên Controller (trả về JSON)
-            fetch(`/Cart/Remove?productId=${productId}&variantId=${variantId}`, {
                 method: 'POST'
             })
-            .then(response => {
-                if (!response.ok) throw new Error('Lỗi xóa sản phẩm.');
-                return response.json();
-            })
+            .then(res => res.json())
             .then(data => {
                 if (data.success) {
-                    if (row) row.remove();
+                    // Tìm dòng tương ứng để update giá
+                    const row = input.closest('.cart-item-row');
 
-                    if (data.grandTotal !== undefined) {
-                        updateGrandTotalDisplay(data.grandTotal);
+                    // Update giá thành tiền của dòng đó
+                    if (row) {
+                        row.querySelector('.item-total-price').textContent = formatCurrency(data.newTotalPrice) + ' đ';
                     }
 
+                    // Update Tổng tiền cả giỏ
+                    document.getElementById('grand-total-display').textContent = formatCurrency(data.grandTotal) + ' đ';
+
+                    // Update lại ô input (phòng trường hợp nhập quá kho, server trả về số max)
+                    input.value = data.newQuantity;
+
+                    if (data.message && data.newQuantity != newQuantity) {
+                         alert(data.message); // Thông báo nếu kho không đủ
+                    }
+                } else {
+                    alert(data.message || "Lỗi cập nhật.");
+                    input.value = 1; // Reset về 1 nếu lỗi
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert("Lỗi kết nối server.");
+            })
+            .finally(() => toggleLoading(false));
+        }
+
+        // 4. Xử lý sự kiện Xóa sản phẩm
+        function handleRemoveItem(event) {
+            const btn = event.currentTarget;
+            const productId = btn.getAttribute('data-product-id');
+            const variantId = btn.getAttribute('data-variant-id');
+
+            if (!confirm("Bạn có chắc muốn xóa sản phẩm này?")) return;
+
+            toggleLoading(true);
+
+            fetch(`/Cart/Remove?productId=${productId}&variantId=${variantId}`, {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    // Nếu xóa hết -> Reload để hiện màn hình giỏ hàng trống
                     if (data.itemCount === 0) {
                         window.location.reload();
                     } else {
-                        document.querySelector('h2').textContent = `Giỏ hàng (${data.itemCount} sản phẩm)`;
+                        // Xóa dòng khỏi bảng
+                        const row = btn.closest('.cart-item-row');
+                        row.remove();
+
+                        // Update tổng tiền
+                        document.getElementById('grand-total-display').textContent = formatCurrency(data.grandTotal) + ' đ';
+
+                        // Update tiêu đề số lượng
+                        document.querySelector('.cart-title').textContent = `Giỏ hàng (${data.itemCount} sản phẩm)`;
                     }
-                } else {
-                    alert(data.message || "Xóa sản phẩm thất bại.");
                 }
             })
-            .catch(error => {
-                console.error(error);
-                alert('Có lỗi xảy ra khi xóa sản phẩm. Vui lòng thử lại.');
-            })
-            .finally(() => {
-                toggleLoading(false);
-            });
+            .catch(err => console.error(err))
+            .finally(() => toggleLoading(false));
         }
 
+        // 5. Gán sự kiện khi trang load xong
         document.addEventListener('DOMContentLoaded', function () {
-            const quantityInputs = document.querySelectorAll('.quantity-input');
-            quantityInputs.forEach(input => {
+            // Gán sự kiện change cho input số lượng
+            const inputs = document.querySelectorAll('.quantity-input');
+            inputs.forEach(input => {
                 input.addEventListener('change', handleQuantityChange);
-                input.addEventListener('blur', handleQuantityChange);
+                // Lưu ý: Không dùng 'blur' để tránh gửi 2 request liên tiếp
             });
 
-            const removeButtons = document.querySelectorAll('.remove-item-btn');
-            removeButtons.forEach(button => {
-                button.addEventListener('click', handleRemoveItem);
+            // Gán sự kiện click cho nút xóa
+            const deleteBtns = document.querySelectorAll('.remove-item-btn');
+            deleteBtns.forEach(btn => {
+                btn.addEventListener('click', handleRemoveItem);
             });
         });
     </script>

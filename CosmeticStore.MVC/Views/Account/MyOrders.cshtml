@@ -2,63 +2,109 @@
 
 @{
     ViewData["Title"] = "Đơn hàng của tôi";
+    string brandRed = "#d14d5a";
 }
 
 <div class="container py-5">
-    <h2 class="mb-4 text-uppercase fw-bold">Đơn hàng của tôi</h2>
+    <h2 class="mb-4 text-uppercase fw-bold text-center" style="color: @brandRed;">Lịch sử đơn hàng</h2>
 
-    @if (!Model.Any())
+    @if (TempData["SuccessMessage"] != null)
     {
-        <div class="alert alert-info">Bạn chưa có đơn hàng nào. <a asp-controller="Products" asp-action="Index">Mua sắm ngay</a></div>
-    }
-    else
-    {
-        <div class="card shadow-sm">
-            <table class="table table-hover mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th>Mã đơn</th>
-                        <th>Ngày đặt</th>
-                        <th>Tổng tiền</th>
-                        <th>Trạng thái</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var item in Model)
-                    {
-                        <tr>
-                            <td>#@item.OrderId</td>
-                            <td>@item.OrderDate?.ToString("dd/MM/yyyy")</td>
-                            <td class="fw-bold text-danger">@item.TotalAmount.ToString("#,##0") đ</td>
-                            <td>
-                                @if (item.Status == "Pending")
-                                {
-                                    <span class="badge bg-warning text-dark">Đang xử lý</span>
-                                }
-                                else if (item.Status == "Shipped")
-                                {
-
-                                    <span class="badge bg-primary">Đang giao</span>
-                                }
-                                else if (item.Status == "Completed")
-                                {
-
-                                    <span class="badge bg-success">Hoàn thành</span>
-                                }
-                                else
-                                {
-
-                                    <span class="badge bg-secondary">@item.Status</span>
-                                }
-                            </td>
-                            <td>
-                                <a asp-action="OrderDetails" asp-route-id="@item.OrderId" class="btn btn-sm btn-outline-primary">Chi tiết</a>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+        <div class="alert alert-success alert-dismissible fade show">
+            @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            @TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="py-3 ps-4">Mã đơn</th>
+                            <th class="py-3">Ngày đặt</th>
+                            <th class="py-3">Tổng tiền</th>
+                            <th class="py-3">Trạng thái</th>
+                            <th class="py-3 text-center">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td class="ps-4 fw-bold text-dark">#@item.OrderId</td>
+                                <td>@item.OrderDate?.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td class="fw-bold" style="color: @brandRed;">@item.TotalAmount.ToString("#,##0") đ</td>
+                                <td>
+                                    @if (item.Status == "Pending")
+                                    {
+                                        <span class="badge bg-warning text-dark">Đang xử lý</span>
+                                    }
+                                    else if (item.Status == "Pending Payment")
+                                    {
+                                        <span class="badge bg-info text-dark">Chờ thanh toán</span>
+                                    }
+                                    else if (item.Status == "Paid")
+                                    {
+                                        <span class="badge bg-success">Đã thanh toán</span>
+                                    }
+                                    else if (item.Status == "Cancelled")
+                                    {
+                                        <span class="badge bg-secondary">Đã hủy</span>
+                                    }
+                                    else if (item.Status == "Processing")
+                                    {
+                                        <span class="badge bg-secondary">Đang đóng gói</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">@item.Status</span>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    <a asp-action="OrderDetails" asp-route-id="@item.OrderId" class="btn btn-sm btn-outline-primary me-1">
+                                        <i class="fa fa-eye"></i> Chi tiết
+                                    </a>
+
+                                    @* Nút Thanh toán & Hủy cho đơn VNPay chưa trả tiền *@
+                                    @if (item.Status == "Pending Payment")
+                                    {
+                                        <a asp-action="RepayOrder" asp-route-orderId="@item.OrderId" class="btn btn-sm btn-success me-1">
+                                            <i class="fa fa-credit-card"></i> Thanh toán
+                                        </a>
+
+                                        <form asp-action="CancelOrder" method="post" class="d-inline" onsubmit="return confirm('Hủy đơn hàng này?');">
+                                            <input type="hidden" name="orderId" value="@item.OrderId" />
+                                            <button type="submit" class="btn btn-sm btn-danger">
+                                                <i class="fa fa-times"></i> Hủy
+                                            </button>
+                                        </form>
+                                    }
+
+                                    @* Nút Hủy cho đơn COD đang xử lý *@
+                                    @if (item.Status == "Pending")
+                                    {
+                                        <form asp-action="CancelOrder" method="post" class="d-inline" onsubmit="return confirm('Bạn chắc chắn muốn hủy đơn hàng này?');">
+                                            <input type="hidden" name="orderId" value="@item.OrderId" />
+                                            <button type="submit" class="btn btn-sm btn-danger">
+                                                <i class="fa fa-times"></i> Hủy đơn
+                                            </button>
+                                        </form>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 </div>

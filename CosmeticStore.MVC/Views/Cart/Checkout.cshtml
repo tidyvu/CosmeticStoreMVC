@@ -4,13 +4,13 @@
     ViewData["Title"] = "Thanh toán";
     decimal total = Model.Sum(x => x.TotalPrice);
 
-    // Định nghĩa tông màu mới
-    string brandRed = "#d14d5a";    // Đỏ San Hô đậm (Coral Red)
-    string lightPink = "#f7e6e9";  // Hồng Nhạt (Light Pink)
+    // Định nghĩa tông màu
+    string brandRed = "#d14d5a";
+    string lightPink = "#f7e6e9";
 }
 
 <style>
-   
+    /* CSS TÙY CHỈNH */
     .text-custom-primary {
         color: @brandRed !important;
     }
@@ -19,23 +19,51 @@
         background-color: @lightPink !important;
     }
 
-    .btn-primary-custom {
+    /* Nút Hoàn tất */
+    .btn-checkout-complete {
         background-color: @brandRed !important;
         border-color: @brandRed !important;
         color: white;
+        font-size: 1.1rem;
+        font-weight: bold;
+        transition: all 0.3s;
     }
 
-        .btn-primary-custom:hover {
+        .btn-checkout-complete:hover {
             background-color: #b03d47 !important;
             border-color: #b03d47 !important;
+            box-shadow: 0 4px 10px rgba(209, 77, 90, 0.4);
         }
 
-    /* Tiêu đề trang */
-    h2.mb-4 {
-        color: @brandRed;
+    /* Card Payment Option */
+    .payment-option {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 10px;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
     }
 
-    /* Card Thông tin giao hàng */
+        .payment-option:hover {
+            background-color: #f9f9f9;
+            border-color: @brandRed;
+        }
+
+        /* Khi radio được chọn */
+        .payment-option.selected {
+            border-color: @brandRed;
+            background-color: @lightPink; /* Nền hồng nhạt khi chọn */
+        }
+
+    .form-check-input:checked {
+        background-color: @brandRed;
+        border-color: @brandRed;
+    }
+
+    /* Các style cũ */
     .card-header.bg-white {
         border-bottom: 1px solid #eee;
     }
@@ -44,76 +72,75 @@
         color: @brandRed;
     }
 
-    /* Nút Hoàn tất đặt hàng */
-    .btn-checkout-complete {
-        background-color: @brandRed !important;
-        border-color: @brandRed !important;
-        color: white;
-        font-size: 1.1rem;
-        font-weight: bold;
-        transition: background-color 0.2s, border-color 0.2s;
-    }
-
-        .btn-checkout-complete:hover {
-            background-color: #b03d47 !important;
-            border-color: #b03d47 !important;
-        }
-
-    /* Card Đơn hàng của bạn */
     .card.bg-light {
-        background-color: @lightPink !important; /* Nền card tổng cộng */
+        background-color: @lightPink !important;
         border: none;
-        box-shadow: 0 0 15px rgba(0,0,0,0.05);
     }
 
     .card-title.fw-bold {
         color: @brandRed;
     }
 
-    /* Tổng cộng */
-    .border-top.border-secondary {
-        border-color: #ddd !important; /* Giữ màu xám cho đường kẻ */
-    }
-
     .h4.text-danger {
-        color: @brandRed !important; /* Tổng cộng màu Đỏ San Hô */
+        color: @brandRed !important;
     }
 
-    /* Form control */
     .form-control {
         border-radius: 0.3rem;
     }
 </style>
 
 <div class="container py-5">
-    <h2 class="mb-4 text-uppercase fw-bold">Xác nhận đơn hàng</h2>
+    <h2 class="mb-4 text-uppercase fw-bold text-center" style="color: @brandRed;">Xác nhận đơn hàng</h2>
 
     <div class="row">
-        <div class="col-md-7">
+        <div class="col-md-7 mb-4">
             <div class="card shadow-sm border-0">
-                <div class="card-header bg-white">
-                    <h5 class="mb-0 fw-bold">Thông tin giao hàng</h5> @* Đã điều chỉnh màu trong CSS tùy chỉnh *@
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0 fw-bold"><i class="fa-solid fa-truck-fast me-2"></i>Thông tin giao hàng</h5>
                 </div>
-                <div class="card-body">
-                    <form asp-action="Checkout" method="post">
+                <div class="card-body p-4">
+                    <form asp-action="Checkout" method="post" id="checkoutForm">
                         <div class="mb-3">
-                            <label class="form-label">Họ và tên người nhận</label>
+                            <label class="form-label fw-bold">Họ và tên người nhận</label>
                             <input type="text" name="customerName" class="form-control" required placeholder="Nguyễn Văn A" value="@User.Identity.Name">
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Số điện thoại</label>
-                            <input type="tel" name="phone" class="form-control" required placeholder="09xxx...">
+                            <label class="form-label fw-bold">Số điện thoại</label>
+                            <input type="tel" name="phone" class="form-control" required placeholder="09xxx..." pattern="[0-9]{10}">
                         </div>
 
-                        <div class="mb-3">
-                            <label class="form-label">Địa chỉ nhận hàng</label>
-                            <textarea name="address" class="form-control" rows="3" required placeholder="Số nhà, đường, phường/xã..."></textarea>
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Địa chỉ nhận hàng</label>
+                            <textarea name="address" class="form-control" rows="2" required placeholder="Số nhà, đường, phường/xã, quận/huyện..."></textarea>
                         </div>
 
-                        <button type="submit" class="btn btn-checkout-complete w-100 py-2 fw-bold">
-                            @* Thay btn-success bằng btn-checkout-complete *@
-                            HOÀN TẤT ĐẶT HÀNG
+                        <hr class="my-4 text-muted">
+                        <h5 class="mb-3 fw-bold text-custom-primary"><i class="fa-regular fa-credit-card me-2"></i>Phương thức thanh toán</h5>
+
+                        <div class="form-check payment-option selected" onclick="selectPayment('cod')">
+                            <input class="form-check-input me-3" type="radio" name="paymentMethod" id="paymentCOD" value="COD" checked>
+                            <label class="form-check-label w-100" for="paymentCOD" style="cursor: pointer;">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <span class="fw-bold"><i class="fa-solid fa-money-bill-wave text-success me-2"></i>Thanh toán khi nhận hàng (COD)</span>
+                                </div>
+                            </label>
+                        </div>
+
+                        <div class="form-check payment-option" onclick="selectPayment('vnpay')">
+                            <input class="form-check-input me-3" type="radio" name="paymentMethod" id="paymentVNPay" value="VNPay">
+                            <label class="form-check-label w-100" for="paymentVNPay" style="cursor: pointer;">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <span class="fw-bold">Thanh toán Online qua VNPay</span>
+
+                                    <img src="https://vnpay.vn/assets/images/logo-icon/logo-primary.svg" alt="VNPay" style="height: 25px;">
+                                </div>
+                            </label>
+                        </div>
+
+                        <button type="submit" class="btn btn-checkout-complete w-100 py-3 mt-3 fw-bold text-uppercase shadow-sm">
+                            Đặt hàng ngay
                         </button>
                     </form>
                 </div>
@@ -121,32 +148,67 @@
         </div>
 
         <div class="col-md-5">
-            <div class="card bg-custom-light border-0">
-                @* Thay bg-light bằng bg-custom-light *@
-                <div class="card-body">
-                    <h5 class="card-title fw-bold mb-3">Đơn hàng của bạn</h5> @* Đã điều chỉnh màu trong CSS tùy chỉnh *@
-                    <ul class="list-group list-group-flush mb-3 rounded">
+            <div class="card bg-custom-light border-0 sticky-top" style="top: 80px; z-index: 1;">
+                <div class="card-body p-4">
+                    <h5 class="card-title fw-bold mb-3 border-bottom border-secondary pb-2">Đơn hàng của bạn</h5>
+                    <ul class="list-group list-group-flush mb-3 rounded bg-transparent">
                         @foreach (var item in Model)
                         {
-                            <li class="list-group-item d-flex justify-content-between align-items-center bg-transparent px-0">
+                            <li class="list-group-item d-flex justify-content-between align-items-center bg-transparent px-0 border-bottom border-white">
                                 <div class="d-flex align-items-center">
-                                    <img src="@item.ImageUrl" style="width:50px; height:50px; object-fit:cover" class="rounded me-2 border">
-                                    <div>
-                                        <div class="fw-bold text-truncate" style="max-width: 150px;">@item.ProductName</div>
-                                        <small class="text-muted">x @item.Quantity</small>
+                                    <div class="position-relative">
+                                        <img src="@item.ImageUrl" style="width:55px; height:55px; object-fit:cover" class="rounded border bg-white">
+                                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-secondary">
+                                            @item.Quantity
+                                        </span>
+                                    </div>
+                                    <div class="ms-3">
+                                        <div class="fw-bold text-truncate" style="max-width: 140px;">@item.ProductName</div>
+                                        @if (!string.IsNullOrEmpty(item.VariantName))
+                                        {
+                                            <small class="text-muted d-block">@item.VariantName</small>
+                                        }
                                     </div>
                                 </div>
-                                <span class="text-muted">@item.TotalPrice.ToString("#,##0") đ</span>
+                                <span class="fw-bold text-dark">@item.TotalPrice.ToString("#,##0") đ</span>
                             </li>
                         }
                     </ul>
-                    <div class="d-flex justify-content-between border-top pt-3">
-                        @* Đã xóa class border-secondary để dùng CSS tùy chỉnh *@
-                        <span class="h5 fw-bold text-custom-primary">Tổng cộng:</span> @* Đã thêm text-custom-primary *@
-                        <strong class="h4">@total.ToString("#,##0") đ</strong> @* Đã điều chỉnh màu trong CSS tùy chỉnh *@
+
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Tạm tính:</span>
+                        <span class="fw-bold">@total.ToString("#,##0") đ</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-3">
+                        <span class="text-muted">Phí vận chuyển:</span>
+                        <span class="text-success fw-bold">Miễn phí</span>
+                    </div>
+
+                    <div class="d-flex justify-content-between border-top border-secondary pt-3 mt-2">
+                        <span class="h5 fw-bold text-custom-primary">Tổng cộng:</span>
+                        <strong class="h4 text-custom-primary">@total.ToString("#,##0") đ</strong>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        // Script nhỏ để đổi màu nền khi chọn phương thức thanh toán
+        function selectPayment(type) {
+            // Xóa class selected ở tất cả option
+            document.querySelectorAll('.payment-option').forEach(el => el.classList.remove('selected'));
+
+            // Thêm class selected vào option được chọn
+            if (type === 'cod') {
+                document.getElementById('paymentCOD').checked = true;
+                document.getElementById('paymentCOD').closest('.payment-option').classList.add('selected');
+            } else {
+                document.getElementById('paymentVNPay').checked = true;
+                document.getElementById('paymentVNPay').closest('.payment-option').classList.add('selected');
+            }
+        }
+    </script>
+}

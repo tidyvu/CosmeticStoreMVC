@@ -4,10 +4,8 @@
     {
         public int ProductId { get; set; }
 
-        // BỔ SUNG để hỗ trợ phân loại sản phẩm
-        public int VariantId { get; set; }
+        public int VariantId { get; set; }   
         public string VariantName { get; set; }
-        // ------------------------------------
 
         public string ProductName { get; set; }
         public string ImageUrl { get; set; }

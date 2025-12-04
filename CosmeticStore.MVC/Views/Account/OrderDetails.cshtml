@@ -10,9 +10,32 @@
     <div class="card">
         <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
             <span>Đơn hàng #@Model.OrderId</span>
-            <span class="badge bg-warning text-dark">@Model.Status</span>
+            @{
+                string statusText = Model.Status switch
+                {
+                    "Pending" => "Chờ xử lý",
+                    "Paid" => "Chờ xử lý",
+                    "Processing" => "Đang đóng gói",
+                    "Shipped" => "Đang giao hàng",
+                    "Completed" => "Đã hoàn thành",
+                    "Cancelled" => "Đã hủy",
+                    _ => Model.Status
+                };
+                string badgeClass = Model.Status switch
+                {
+                    "Pending" or "Paid" => "bg-warning text-dark",
+                    "Processing" => "bg-info text-white",
+                    "Shipped" => "bg-primary",
+                    "Completed" => "bg-success",
+                    "Cancelled" => "bg-danger",
+                    _ => "bg-secondary"
+                };
+            }
+            <span class="badge @badgeClass">@statusText</span>
         </div>
+
         <div class="card-body">
+
             <div class="row mb-3">
                 <div class="col-md-6">
                     <h6 class="fw-bold">Địa chỉ nhận hàng</h6>
@@ -30,16 +53,19 @@
                     @foreach (var item in Model.OrderDetails)
                     {
                         var product = item.Variant?.Product;
+
                         <tr>
                             <td style="width: 70px;">
                                 <img src="@(product?.MainImageUrl ?? "https://via.placeholder.com/50")" width="60" height="60" class="rounded border" style="object-fit:cover" />
                             </td>
                             <td>
-                                <p class="mb-0 fw-bold">@product?.ProductName</p>
-                                <small class="text-muted">Phân loại: @item.Variant?.VariantName</small>
+                                <a asp-controller="Products" asp-action="Details" asp-route-id="@product?.ProductId" class="text-decoration-none text-dark d-block">
+                                    <p class="mb-0 fw-bold">@product?.ProductName</p>
+                                    <small class="text-muted">Phân loại: @item.Variant?.VariantName</small>
+                                </a>
                             </td>
-                            <td class="text-center">x @item.Quantity</td>
-                            <td class="text-end fw-bold">@((item.Quantity * item.UnitPrice).ToString("#,##0")) đ</td>
+                            <td class="text-center align-middle">x @item.Quantity</td>
+                            <td class="text-end fw-bold align-middle">@((item.Quantity * item.UnitPrice).ToString("#,##0")) đ</td>
                         </tr>
                     }
                 </tbody>

@@ -1,235 +1,560 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using CosmeticStore.MVC.Models;
-using CosmeticStore.MVC.Helpers; // Cần thiết cho Session Extensions
+using CosmeticStore.MVC.Helpers; // Chứa VnPayLibrary & SessionHelper
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Configuration;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System;
-using System.Collections.Generic;
 
 namespace CosmeticStore.MVC.Controllers
 {
     public class CartController : Controller
     {
         private readonly CosmeticStoreContext _context;
+        private readonly IConfiguration _configuration;
 
-        public CartController(CosmeticStoreContext context)
+        public CartController(CosmeticStoreContext context, IConfiguration configuration)
         {
             _context = context;
+            _configuration = configuration;
         }
 
-        // GET: /Cart/Index
-        public IActionResult Index()
+        // ==========================================================
+        // 1. HIỂN THỊ GIỎ HÀNG (INDEX)
+        // ==========================================================
+        public async Task<IActionResult> Index()
         {
-            var cart = HttpContext.Session.Get<List<CartItem>>("Cart") ?? new List<CartItem>();
-            return View(cart);
+            var cartItems = new List<CartItem>();
+
+            if (User.Identity.IsAuthenticated)
+            {
+                int userId = GetUserId();
+                var dbCarts = await _context.Carts
+                    .Include(c => c.Product)
+                    .Include(c => c.ProductVariant)
+                    .Where(c => c.UserId == userId)
+                    .ToListAsync();
+
+                foreach (var c in dbCarts)
+                {
+                    if (c.ProductVariant != null)
+                    {
+                        cartItems.Add(new CartItem
+                        {
+                            ProductId = c.ProductId,
+                            VariantId = c.VariantId,
+                            ProductName = c.Product?.ProductName,
+                            VariantName = c.ProductVariant.VariantName,
+                            ImageUrl = c.Product?.MainImageUrl,
+                            Price = GetEffectivePrice(c.ProductVariant),
+                            Quantity = c.Quantity
+                        });
+                    }
+                }
+            }
+            else
+            {
+                cartItems = HttpContext.Session.Get<List<CartItem>>("Cart") ?? new List<CartItem>();
+            }
+
+            return View(cartItems);
         }
 
-        // POST/GET: /Cart/AddToCart?productId=1&variantId=5&quantity=1
+        // ==========================================================
+        // 2. THÊM VÀO GIỎ
+        // ==========================================================
         public async Task<IActionResult> AddToCart(int productId, int variantId, int quantity = 1)
         {
             if (quantity <= 0) quantity = 1;
 
-            var cart = HttpContext.Session.Get<List<CartItem>>("Cart") ?? new List<CartItem>();
+            var variant = await _context.ProductVariants.FindAsync(variantId);
+            if (variant == null) return NotFound();
 
-            // 1. Tìm kiếm item trong giỏ hàng (phải khớp cả ProductId và VariantId)
-            var existingItem = cart.FirstOrDefault(x => x.ProductId == productId && x.VariantId == variantId);
+            // SỬA LỖI: Đã bỏ "?? 0" vì StockQuantity là int
+            int currentStock = variant.StockQuantity;
 
-            if (existingItem != null)
+            if (currentStock < quantity)
             {
-                existingItem.Quantity += quantity;
+                TempData["ErrorMessage"] = $"Sản phẩm này chỉ còn {currentStock} món.";
+                string referer = Request.Headers["Referer"].ToString();
+                return !string.IsNullOrEmpty(referer) ? Redirect(referer) : RedirectToAction("Index");
+            }
+
+            if (User.Identity.IsAuthenticated)
+            {
+                int userId = GetUserId();
+                var dbItem = await _context.Carts
+                    .FirstOrDefaultAsync(c => c.UserId == userId && c.ProductId == productId && c.VariantId == variantId);
+
+                if (dbItem != null)
+                {
+                    if (currentStock < (dbItem.Quantity + quantity))
+                    {
+                        TempData["ErrorMessage"] = $"Kho không đủ. Bạn đã có {dbItem.Quantity} trong giỏ.";
+                    }
+                    else
+                    {
+                        dbItem.Quantity += quantity;
+                    }
+                }
+                else
+                {
+                    var newCart = new Cart
+                    {
+                        UserId = userId,
+                        ProductId = productId,
+                        VariantId = variantId,
+                        Quantity = quantity,
+                        CreatedDate = DateTime.Now
+                    };
+                    _context.Carts.Add(newCart);
+                }
+                await _context.SaveChangesAsync();
             }
             else
             {
-                // 2. Lấy thông tin Variant và Product từ DB
-                var variant = await _context.ProductVariants
-                    .Include(v => v.Product) // PHẢI include Product để lấy tên, ảnh
-                    .FirstOrDefaultAsync(v => v.VariantId == variantId && v.ProductId == productId);
+                var cart = HttpContext.Session.Get<List<CartItem>>("Cart") ?? new List<CartItem>();
+                var existingItem = cart.FirstOrDefault(x => x.ProductId == productId && x.VariantId == variantId);
 
-                if (variant == null || variant.Product == null)
+                if (existingItem != null)
                 {
-                    TempData["ErrorMessage"] = "Không tìm thấy sản phẩm hoặc phân loại.";
-                    return RedirectToAction("Details", "Products", new { id = productId });
+                    if (currentStock < (existingItem.Quantity + quantity))
+                    {
+                        TempData["ErrorMessage"] = $"Kho không đủ hàng.";
+                    }
+                    else
+                    {
+                        existingItem.Quantity += quantity;
+                    }
                 }
-
-                var item = new CartItem
+                else
                 {
-                    ProductId = variant.ProductId,
-                    VariantId = variant.VariantId,          // Lưu VariantId
-                    VariantName = variant.VariantName,      // Lưu VariantName
-                    ProductName = variant.Product.ProductName,
-                    ImageUrl = variant.Product.MainImageUrl, // Lấy ảnh chính từ Product
-                    Price = variant.Price,
-                    Quantity = quantity
-                };
-                cart.Add(item);
+                    var product = await _context.Products.FindAsync(productId);
+                    cart.Add(new CartItem
+                    {
+                        ProductId = variant.ProductId,
+                        VariantId = variant.VariantId,
+                        ProductName = product?.ProductName,
+                        VariantName = variant.VariantName,
+                        ImageUrl = product?.MainImageUrl,
+                        Price = GetEffectivePrice(variant),
+                        Quantity = quantity
+                    });
+                }
+                HttpContext.Session.Set("Cart", cart);
             }
 
-            HttpContext.Session.Set("Cart", cart);
-            TempData["SuccessMessage"] = $"Đã thêm {quantity} sản phẩm vào giỏ hàng.";
+            if (TempData["ErrorMessage"] == null)
+                TempData["SuccessMessage"] = "Đã thêm vào giỏ hàng!";
 
-            return RedirectToAction("Index");
+            string urlReferer = Request.Headers["Referer"].ToString();
+            return !string.IsNullOrEmpty(urlReferer) ? Redirect(urlReferer) : RedirectToAction("Index");
         }
 
-        // POST: /Cart/UpdateQuantity?productId=1&variantId=5&quantity=2
-        // Xử lý AJAX để cập nhật số lượng
+        // ==========================================================
+        // 3. CẬP NHẬT SỐ LƯỢNG (AJAX)
+        // ==========================================================
         [HttpPost]
-        public IActionResult UpdateQuantity(int productId, int variantId, int quantity)
+        public async Task<IActionResult> UpdateQuantity(int productId, int variantId, int quantity)
         {
-            var cart = HttpContext.Session.Get<List<CartItem>>("Cart") ?? new List<CartItem>();
-            var item = cart.FirstOrDefault(x => x.ProductId == productId && x.VariantId == variantId);
+            if (quantity <= 0) return await Remove(productId, variantId);
 
-            if (item == null)
+            var variant = await _context.ProductVariants.FindAsync(variantId);
+            if (variant == null) return Json(new { success = false, message = "Sản phẩm không tồn tại." });
+
+            // SỬA LỖI: Đã bỏ "?? 0"
+            int currentStock = variant.StockQuantity;
+
+            if (currentStock < quantity)
             {
-                return Json(new { success = false, message = "Không tìm thấy sản phẩm trong giỏ." });
+                return Json(new { success = false, message = $"Kho chỉ còn {currentStock} sản phẩm.", newQuantity = currentStock });
             }
 
-            if (quantity <= 0)
+            decimal grandTotal = 0;
+            decimal itemTotalPrice = 0;
+
+            if (User.Identity.IsAuthenticated)
             {
-                // Nếu số lượng <= 0, ta chuyển sang xóa sản phẩm
-                return RemoveConfirmed(productId, variantId);
+                int userId = GetUserId();
+                var dbItem = await _context.Carts.FirstOrDefaultAsync(c => c.UserId == userId && c.ProductId == productId && c.VariantId == variantId);
+
+                if (dbItem != null)
+                {
+                    dbItem.Quantity = quantity;
+                    await _context.SaveChangesAsync();
+
+                    var currentCart = await _context.Carts.Include(c => c.ProductVariant).Where(c => c.UserId == userId).ToListAsync();
+                    grandTotal = currentCart.Sum(c => c.Quantity * GetEffectivePrice(c.ProductVariant));
+
+                    var currentItem = currentCart.FirstOrDefault(c => c.ProductId == productId && c.VariantId == variantId);
+                    if (currentItem != null)
+                    {
+                        itemTotalPrice = currentItem.Quantity * GetEffectivePrice(currentItem.ProductVariant);
+                    }
+                }
+            }
+            else
+            {
+                var cart = HttpContext.Session.Get<List<CartItem>>("Cart");
+                var item = cart?.FirstOrDefault(x => x.ProductId == productId && x.VariantId == variantId);
+                if (item != null)
+                {
+                    item.Quantity = quantity;
+                    HttpContext.Session.Set("Cart", cart);
+                    grandTotal = cart.Sum(x => x.TotalPrice);
+                    itemTotalPrice = item.TotalPrice;
+                }
             }
 
-            // Cập nhật số lượng
-            item.Quantity = quantity;
-
-            // Tính toán giá trị mới
-            var newTotalPrice = item.TotalPrice;
-            var grandTotal = cart.Sum(x => x.TotalPrice);
-
-            HttpContext.Session.Set("Cart", cart);
-
-            // Trả về JSON để View cập nhật
             return Json(new
             {
                 success = true,
-                newQuantity = item.Quantity,
-                newTotalPrice = newTotalPrice,
                 grandTotal = grandTotal,
-                message = "Cập nhật thành công."
+                newTotalPrice = itemTotalPrice,
+                newQuantity = quantity
             });
         }
 
-
-        // POST: /Cart/Remove?productId=1&variantId=5
-        // Xử lý AJAX để xóa sản phẩm
-        [HttpPost]
-        public IActionResult Remove(int productId, int variantId)
+        // ==========================================================
+        // 4. XÓA SẢN PHẨM (AJAX)
+        // ==========================================================
+        public async Task<IActionResult> Remove(int productId, int variantId)
         {
-            return RemoveConfirmed(productId, variantId);
-        }
-
-        // Logic xóa sản phẩm (dùng chung cho cả AJAX và GET cũ)
-        private IActionResult RemoveConfirmed(int productId, int variantId)
-        {
-            var cart = HttpContext.Session.Get<List<CartItem>>("Cart") ?? new List<CartItem>();
-
-            // Tìm item dựa trên cả ProductId và VariantId
-            var itemToRemove = cart.FirstOrDefault(x => x.ProductId == productId && x.VariantId == variantId);
-
-            if (itemToRemove != null)
+            try
             {
-                cart.Remove(itemToRemove);
-                HttpContext.Session.Set("Cart", cart);
+                decimal grandTotal = 0;
+                int itemCount = 0;
 
-                // Tính toán tổng tiền và số lượng item còn lại
-                var grandTotal = cart.Sum(x => x.TotalPrice);
-                var itemCount = cart.Count;
-
-                // Trả về JSON cho AJAX
-                return Json(new
+                if (User.Identity.IsAuthenticated)
                 {
-                    success = true,
-                    grandTotal = grandTotal,
-                    itemCount = itemCount,
-                    message = "Xóa sản phẩm thành công."
-                });
-            }
+                    int userId = GetUserId();
+                    if (userId == 0) return RedirectToAction("Login", "Account");
 
-            // Nếu không tìm thấy, trả về JSON lỗi
-            return Json(new { success = false, message = "Không tìm thấy sản phẩm cần xóa." });
+                    var dbItem = await _context.Carts.FirstOrDefaultAsync(c => c.UserId == userId && c.ProductId == productId && c.VariantId == variantId);
+                    if (dbItem != null)
+                    {
+                        _context.Carts.Remove(dbItem);
+                        await _context.SaveChangesAsync();
+                    }
+
+                    var currentCart = await _context.Carts.Include(c => c.ProductVariant).Where(c => c.UserId == userId).ToListAsync();
+                    grandTotal = currentCart.Sum(c => c.Quantity * GetEffectivePrice(c.ProductVariant));
+                    itemCount = currentCart.Count;
+                }
+                else
+                {
+                    var cart = HttpContext.Session.Get<List<CartItem>>("Cart");
+                    if (cart != null)
+                    {
+                        cart.RemoveAll(x => x.ProductId == productId && x.VariantId == variantId);
+                        HttpContext.Session.Set("Cart", cart);
+                        grandTotal = cart.Sum(x => x.TotalPrice);
+                        itemCount = cart.Count;
+                    }
+                }
+
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                {
+                    return Json(new { success = true, grandTotal = grandTotal, itemCount = itemCount });
+                }
+
+                return RedirectToAction("Index");
+            }
+            catch
+            {
+                return RedirectToAction("Index");
+            }
         }
 
-
-        // 1. Hiển thị form điền thông tin (Bắt buộc đăng nhập)
+        // ==========================================================
+        // 5. TRANG THANH TOÁN (GET)
+        // ==========================================================
         [Authorize]
         [HttpGet]
-        public IActionResult Checkout()
+        public async Task<IActionResult> Checkout()
         {
-            var cart = HttpContext.Session.Get<List<CartItem>>("Cart") ?? new List<CartItem>();
+            int userId = GetUserId();
+            if (userId == 0) return RedirectToAction("Login", "Account");
 
-            if (cart.Count == 0) return RedirectToAction("Index");
+            var dbCarts = await _context.Carts
+                .Include(c => c.Product)
+                .Include(c => c.ProductVariant)
+                .Where(c => c.UserId == userId)
+                .ToListAsync();
 
-            // Lấy thông tin người dùng để điền sẵn vào form
-            // (Bạn cần tùy chỉnh phần này dựa trên User Model của bạn)
-            var userIdClaim = User.FindFirst("UserId");
-            if (userIdClaim != null && int.TryParse(userIdClaim.Value, out int userId))
+            if (dbCarts.Count == 0)
             {
-                var user = _context.Users.FirstOrDefault(u => u.UserId == userId);
-                ViewBag.User = user;
+                TempData["ErrorMessage"] = "Giỏ hàng trống.";
+                return RedirectToAction("Index");
             }
 
-            return View(cart);
+            var cartItems = dbCarts.Select(c => new CartItem
+            {
+                ProductId = c.ProductId,
+                VariantId = c.VariantId,
+                ProductName = c.Product?.ProductName,
+                VariantName = c.ProductVariant?.VariantName,
+                ImageUrl = c.Product?.MainImageUrl,
+                Price = GetEffectivePrice(c.ProductVariant),
+                Quantity = c.Quantity
+            }).ToList();
+
+            var user = await _context.Users.FindAsync(userId);
+            ViewBag.User = user;
+
+            return View(cartItems);
         }
 
-        // 2. Xử lý lưu đơn hàng khi bấm nút "Xác nhận"
+        // ==========================================================
+        // 6. XỬ LÝ ĐẶT HÀNG (POST) - CHUẨN LOGIC VNPAY
+        // ==========================================================
         [Authorize]
         [HttpPost]
-        public async Task<IActionResult> Checkout(string customerName, string phone, string address)
+        public async Task<IActionResult> Checkout(string customerName, string phone, string address, string paymentMethod)
         {
-            var cart = HttpContext.Session.Get<List<CartItem>>("Cart") ?? new List<CartItem>();
-            if (cart.Count == 0) return RedirectToAction("Index");
-
-            var userIdClaim = User.FindFirst("UserId");
-            int? userId = userIdClaim != null ? int.Parse(userIdClaim.Value) : null;
-
-            // A. TẠO ĐƠN HÀNG (ORDER)
-            var order = new Order
+            if (string.IsNullOrEmpty(customerName) || string.IsNullOrEmpty(phone) || string.IsNullOrEmpty(address))
             {
-                UserId = userId,
-                CustomerName = customerName,
-                CustomerPhone = phone,
-                ShippingAddress = address,
-                OrderDate = DateTime.Now,
-                TotalAmount = cart.Sum(x => x.TotalPrice),
-                Status = "Pending"
-            };
+                TempData["ErrorMessage"] = "Vui lòng nhập đầy đủ thông tin giao hàng.";
+                return RedirectToAction("Checkout");
+            }
 
-            _context.Orders.Add(order);
-            await _context.SaveChangesAsync();
+            int userId = GetUserId();
+            if (userId == 0) return RedirectToAction("Login", "Account");
 
-            // B. TẠO CHI TIẾT ĐƠN (ORDER DETAILS) VÀ CẬP NHẬT KHO
-            foreach (var item in cart)
+            using (var transaction = _context.Database.BeginTransaction())
             {
-                var orderDetail = new OrderDetail
+                try
                 {
-                    OrderId = order.OrderId,
-                    VariantId = item.VariantId, // Sử dụng VariantId đã lưu
-                    Quantity = item.Quantity,
-                    UnitPrice = item.Price
-                };
-                _context.OrderDetails.Add(orderDetail);
+                    var dbCarts = await _context.Carts
+                        .Include(c => c.ProductVariant)
+                        .Where(c => c.UserId == userId)
+                        .ToListAsync();
 
-                // CẬP NHẬT KHO
-                var variant = await _context.ProductVariants.FirstOrDefaultAsync(v => v.VariantId == item.VariantId);
-                if (variant != null)
+                    if (dbCarts.Count == 0) return RedirectToAction("Index");
+
+                    decimal totalAmount = dbCarts.Sum(c => c.Quantity * GetEffectivePrice(c.ProductVariant));
+
+                    // 1. Tạo đơn hàng
+                    var order = new Order
+                    {
+                        UserId = userId,
+                        CustomerName = customerName,
+                        CustomerPhone = phone,
+                        ShippingAddress = address,
+                        OrderDate = DateTime.Now,
+                        TotalAmount = totalAmount,
+                        Status = paymentMethod == "VNPay" ? "Pending Payment" : "Pending"
+                    };
+
+                    _context.Orders.Add(order);
+                    await _context.SaveChangesAsync();
+
+                    // 2. Tạo chi tiết đơn
+                    foreach (var item in dbCarts)
+                    {
+                        var variant = await _context.ProductVariants.FindAsync(item.VariantId);
+
+                        // Kiểm tra kho cơ bản
+                        if (variant == null) throw new Exception("Sản phẩm không tồn tại.");
+
+                        // SỬA LỖI: Bỏ "?? 0"
+                        int currentStock = variant.StockQuantity;
+
+                        if (currentStock < item.Quantity)
+                        {
+                            throw new Exception($"Sản phẩm '{variant.VariantName}' hiện không đủ hàng.");
+                        }
+
+                        // QUAN TRỌNG: Chỉ trừ kho nếu là COD
+                        if (paymentMethod == "COD")
+                        {
+                            variant.StockQuantity = currentStock - item.Quantity;
+                        }
+
+                        var orderDetail = new OrderDetail
+                        {
+                            OrderId = order.OrderId,
+                            VariantId = item.VariantId,
+                            Quantity = item.Quantity,
+                            UnitPrice = GetEffectivePrice(item.ProductVariant)
+                        };
+                        _context.OrderDetails.Add(orderDetail);
+                    }
+
+                    // QUAN TRỌNG: Chỉ xóa giỏ hàng nếu là COD
+                    if (paymentMethod == "COD")
+                    {
+                        _context.Carts.RemoveRange(dbCarts);
+                    }
+
+                    await _context.SaveChangesAsync();
+                    transaction.Commit();
+
+                    // 4. Điều hướng
+                    if (paymentMethod == "VNPay")
+                    {
+                        // Giỏ hàng vẫn còn, Kho chưa trừ -> Chuyển sang VNPay
+                        var vnpayUrl = CreateVnPayUrl(order.OrderId, totalAmount);
+                        return Redirect(vnpayUrl);
+                    }
+                    else
+                    {
+                        // COD: Đã trừ kho, đã xóa giỏ -> Xong
+                        TempData["SuccessMessage"] = "Đặt hàng thành công!";
+                        return RedirectToAction("OrderSuccess");
+                    }
+                }
+                catch (Exception ex)
                 {
-                    // Đảm bảo số lượng tồn kho không âm
-                    variant.StockQuantity = Math.Max(0, variant.StockQuantity - item.Quantity);
+                    transaction.Rollback();
+                    TempData["ErrorMessage"] = "Lỗi đặt hàng: " + ex.Message;
+                    return RedirectToAction("Checkout");
+                }
+            }
+        }
+
+        // ==========================================================
+        // 7. PAYMENT CALLBACK (VNPAY) - XỬ LÝ KẾT QUẢ
+        // ==========================================================
+        [HttpGet]
+        public async Task<IActionResult> PaymentCallback()
+        {
+            var response = _configuration.GetSection("VnPay");
+            if (Request.Query.Count == 0) return RedirectToAction("Index");
+
+            var vnpay = new VnPayLibrary();
+            foreach (var s in Request.Query)
+            {
+                if (!string.IsNullOrEmpty(s.Key) && s.Key.StartsWith("vnp_"))
+                {
+                    vnpay.AddResponseData(s.Key, s.Value);
                 }
             }
 
-            await _context.SaveChangesAsync();
+            long orderId = Convert.ToInt64(vnpay.GetResponseData("vnp_TxnRef"));
+            string vnp_ResponseCode = vnpay.GetResponseData("vnp_ResponseCode");
+            string vnp_SecureHash = Request.Query["vnp_SecureHash"];
 
-            // C. XÓA GIỎ HÀNG & CHUYỂN HƯỚNG
-            HttpContext.Session.Remove("Cart");
-            TempData["SuccessMessage"] = "Đơn hàng của bạn đã được đặt thành công!";
+            bool checkSignature = vnpay.ValidateSignature(vnp_SecureHash, response["HashSecret"]);
 
-            return RedirectToAction("OrderSuccess");
+            if (checkSignature)
+            {
+                // Load đơn hàng tạm
+                var order = await _context.Orders
+                    .Include(o => o.OrderDetails)
+                    .FirstOrDefaultAsync(o => o.OrderId == orderId);
+
+                if (order == null) return RedirectToAction("Index");
+
+                // CHỈ KHI LÀ "00" MỚI COI LÀ THÀNH CÔNG
+                if (vnp_ResponseCode == "00")
+                {
+                    // === THÀNH CÔNG: LƯU ĐƠN, TRỪ KHO, XÓA GIỎ ===
+                    if (order.Status == "Pending Payment")
+                    {
+                        order.Status = "Paid"; // Đã thanh toán
+
+                        // 1. Trừ kho (Lúc này mới trừ)
+                        foreach (var detail in order.OrderDetails)
+                        {
+                            var variant = await _context.ProductVariants.FindAsync(detail.VariantId);
+                            if (variant != null)
+                            {
+                                // SỬA LỖI: Bỏ "?? 0"
+                                int stock = variant.StockQuantity;
+                                if (stock >= detail.Quantity)
+                                    variant.StockQuantity = stock - detail.Quantity;
+                                else
+                                    variant.StockQuantity = 0; // Hết hàng
+                            }
+                        }
+
+                        // 2. Xóa giỏ hàng của User
+                        int? userId = order.UserId;
+                        if (userId != null)
+                        {
+                            var userCarts = _context.Carts.Where(c => c.UserId == userId);
+                            _context.Carts.RemoveRange(userCarts);
+                        }
+
+                        await _context.SaveChangesAsync();
+                    }
+                    TempData["SuccessMessage"] = "Thanh toán VNPay thành công!";
+                    return RedirectToAction("OrderSuccess");
+                }
+                else
+                {
+                    // === THẤT BẠI: XÓA SẠCH ĐƠN HÀNG TẠM ===
+                    // Giúp Database sạch sẽ, coi như khách chưa từng đặt
+
+                    // 1. Xóa chi tiết đơn hàng trước (Để tránh lỗi FK)
+                    if (order.OrderDetails != null && order.OrderDetails.Any())
+                    {
+                        _context.OrderDetails.RemoveRange(order.OrderDetails);
+                    }
+
+                    // 2. Xóa đơn hàng chính
+                    _context.Orders.Remove(order);
+
+                    await _context.SaveChangesAsync();
+
+                    // Giỏ hàng vẫn còn nguyên (vì chưa xóa ở bước Checkout)
+                    TempData["ErrorMessage"] = "Giao dịch thanh toán đã bị hủy hoặc thất bại. Giỏ hàng của bạn vẫn còn nguyên.";
+                    return RedirectToAction("Index"); // Quay về trang giỏ hàng
+                }
+            }
+            else
+            {
+                TempData["ErrorMessage"] = "Lỗi bảo mật chữ ký số.";
+                return RedirectToAction("Index");
+            }
         }
 
-        // 3. Trang thông báo thành công
+        // ==========================================================
+        // HELPER FUNCTIONS
+        // ==========================================================
+
+        private string CreateVnPayUrl(int orderId, decimal amount)
+        {
+            // URL chuẩn cho port 50587
+            string vnp_Returnurl = "https://localhost:50587/Cart/PaymentCallback";
+
+            string vnp_Url = _configuration["VnPay:BaseUrl"];
+            string vnp_TmnCode = _configuration["VnPay:TmnCode"];
+            string vnp_HashSecret = _configuration["VnPay:HashSecret"];
+
+            VnPayLibrary vnpay = new VnPayLibrary();
+            vnpay.AddRequestData("vnp_Version", "2.1.0");
+            vnpay.AddRequestData("vnp_Command", "pay");
+            vnpay.AddRequestData("vnp_TmnCode", vnp_TmnCode);
+            vnpay.AddRequestData("vnp_Amount", ((long)amount * 100).ToString());
+            vnpay.AddRequestData("vnp_CreateDate", DateTime.Now.ToString("yyyyMMddHHmmss"));
+            vnpay.AddRequestData("vnp_CurrCode", "VND");
+            vnpay.AddRequestData("vnp_IpAddr", HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1");
+            vnpay.AddRequestData("vnp_Locale", "vn");
+            vnpay.AddRequestData("vnp_OrderInfo", "Thanh toan don hang:" + orderId);
+            vnpay.AddRequestData("vnp_OrderType", "other");
+            vnpay.AddRequestData("vnp_ReturnUrl", vnp_Returnurl);
+            vnpay.AddRequestData("vnp_TxnRef", orderId.ToString());
+
+            return vnpay.CreateRequestUrl(vnp_Url, vnp_HashSecret);
+        }
+
+        private int GetUserId()
+        {
+            var claim = User.FindFirst("UserId");
+            return (claim != null && int.TryParse(claim.Value, out int id)) ? id : 0;
+        }
+
+        private decimal GetEffectivePrice(ProductVariant variant)
+        {
+            if (variant == null) return 0;
+            return variant.SalePrice > 0 ? (decimal)variant.SalePrice : variant.Price;
+        }
+
         public IActionResult OrderSuccess()
         {
             return View();

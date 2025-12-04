@@ -4,7 +4,7 @@
     ViewData["Title"] = "Trang chủ";
     // Định nghĩa tông màu mới
     string brandRed = "#d14d5a";    // Đỏ San Hô đậm (Coral Red)
-    string lightPink = "#f7e6e9";  // Hồng Nhạt (Light Pink)
+    string lightPink = "#f7e6e9";   // Hồng Nhạt (Light Pink)
 }
 
 <style>
@@ -50,9 +50,10 @@
         border-radius: 8px;
         overflow: hidden;
         transition: box-shadow 0.3s;
-        /* Thêm thuộc tính căn chỉnh chiều cao để tránh bố cục bị nhảy */
         display: flex;
         flex-direction: column;
+        background: white;
+        height: 100%;
     }
 
         .product-card:hover {
@@ -62,13 +63,18 @@
     .product-img-wrap {
         display: block;
         overflow: hidden;
-        flex-shrink: 0; /* Đảm bảo hình ảnh không bị co lại */
+        flex-shrink: 0;
+        position: relative;
+        padding-top: 100%; /* Tỉ lệ vuông 1:1 */
     }
 
         .product-img-wrap img {
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
-            height: auto;
-            display: block;
+            height: 100%;
+            object-fit: cover; /* Ảnh luôn lấp đầy khung mà không bị méo */
             transition: transform 0.5s ease;
         }
 
@@ -79,25 +85,25 @@
     .product-info {
         padding: 15px;
         text-align: center;
-        flex-grow: 1; /* Cho phép phần thông tin mở rộng */
+        flex-grow: 1;
         display: flex;
         flex-direction: column;
-        justify-content: space-between; /* Đẩy giỏ hàng xuống dưới */
+        justify-content: space-between;
     }
 
-    /* SỬA LỖI TÊN SẢN PHẨM KHÔNG BỊ KHUẤT */
     .product-name {
         display: block;
         font-weight: 600;
         color: #333;
         margin-bottom: 5px;
         text-decoration: none;
-        /* Đã loại bỏ: height: 40px; */
-        /* Đã loại bỏ: overflow: hidden; */
-        white-space: normal; /* Đảm bảo xuống dòng bình thường */
-        min-height: 40px; /* Đảm bảo khoảng cách tối thiểu 2 dòng */
+        white-space: normal;
+        display: -webkit-box;
+        -webkit-line-clamp: 2; /* Giới hạn 2 dòng */
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        min-height: 48px; /* Chiều cao cố định cho 2 dòng */
     }
-        /* KẾT THÚC SỬA LỖI */
 
         .product-name:hover {
             color: @brandRed;
@@ -107,18 +113,36 @@
         font-size: 1.15rem;
         color: @brandRed;
         font-weight: bold;
-        margin-top: 5px;
+        margin-bottom: 15px;
     }
 
     .btn-add-cart {
         background-color: @brandRed;
-        padding: 8px 15px;
+        color: white !important;
+        padding: 10px 15px;
         border-radius: 6px;
         transition: background-color 0.3s;
+        text-decoration: none;
+        display: block;
+        width: 100%;
+        font-weight: 500;
+        border: none;
     }
 
         .btn-add-cart:hover {
             background-color: #b03d47;
+            color: white;
+        }
+
+    .btn-options {
+        background-color: white;
+        color: @brandRed !important;
+        border: 1px solid @brandRed;
+    }
+
+        .btn-options:hover {
+            background-color: @brandRed;
+            color: white !important;
         }
 </style>
 
@@ -145,8 +169,24 @@
     <div class="product-grid">
         @foreach (var item in Model)
         {
-            var firstVariant = item.ProductVariants.FirstOrDefault();
-            var priceDisplay = firstVariant != null ? firstVariant.Price.ToString("#,##0") + " đ" : "Liên hệ";
+            // Logic hiển thị giá và nút bấm
+            var variants = item.ProductVariants?.ToList() ?? new List<CosmeticStore.MVC.Models.ProductVariant>();
+            var firstVariant = variants.FirstOrDefault();
+            var variantCount = variants.Count;
+
+            var priceDisplay = "Liên hệ";
+            if (firstVariant != null)
+            {
+                if (firstVariant.SalePrice > 0)
+                {
+                    priceDisplay = firstVariant.SalePrice?.ToString("#,##0") + " đ";
+                }
+                else
+                {
+                    priceDisplay = firstVariant.Price.ToString("#,##0") + " đ";
+                }
+            }
+
             var imageUrl = string.IsNullOrEmpty(item.MainImageUrl) ? "https://via.placeholder.com/300x300?text=No+Image" : item.MainImageUrl;
 
             <div class="product-card">
@@ -155,15 +195,41 @@
                 </a>
 
                 <div class="product-info">
-                    <a asp-controller="Products" asp-action="Details" asp-route-id="@item.ProductId" class="product-name">
-                        @item.ProductName
-                    </a>
-                    <div class="product-price">@priceDisplay</div>
+                    <div>
+                        <a asp-controller="Products" asp-action="Details" asp-route-id="@item.ProductId" class="product-name" title="@item.ProductName">
+                            @item.ProductName
+                        </a>
+                        <div class="product-price">@priceDisplay</div>
+                    </div>
 
                     <div class="d-flex justify-content-center gap-2 mt-auto">
-                        <a asp-controller="Cart" asp-action="AddToCart" asp-route-productId="@item.ProductId" class="btn-add-cart text-decoration-none text-center d-block text-white w-100">
-                            Thêm vào giỏ
-                        </a>
+                        @if (variantCount > 1)
+                        {
+                            // Có nhiều phân loại -> Nút Tùy chọn (vào trang chi tiết)
+                            <a asp-controller="Products" asp-action="Details" asp-route-id="@item.ProductId"
+                               class="btn-add-cart btn-options">
+                                <i class="fa fa-list me-1"></i> Tùy chọn
+                            </a>
+                        }
+                        else if (variantCount == 1 && firstVariant != null)
+                        {
+                            // Có 1 phân loại -> Thêm thẳng vào giỏ (Truyền VariantId)
+                            <a asp-controller="Cart"
+                               asp-action="AddToCart"
+                               asp-route-productId="@item.ProductId"
+                               asp-route-variantId="@firstVariant.VariantId"
+                               class="btn-add-cart">
+                                <i class="fa fa-cart-plus me-1"></i> Thêm vào giỏ
+                            </a>
+                        }
+                        else
+                        {
+                            // Không có phân loại/giá -> Xem chi tiết
+                            <a asp-controller="Products" asp-action="Details" asp-route-id="@item.ProductId"
+                               class="btn-add-cart btn-options">
+                                <i class="fa fa-eye me-1"></i> Xem chi tiết
+                            </a>
+                        }
                     </div>
                 </div>
             </div>
