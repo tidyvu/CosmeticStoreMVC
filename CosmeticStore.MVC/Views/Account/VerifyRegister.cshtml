@@ -1,0 +1,123 @@
+﻿@{
+    ViewData["Title"] = "Xác thực tài khoản";
+    Layout = "_Layout"; // Hoặc layout của bạn
+}
+
+<div class="container d-flex justify-content-center align-items-center min-vh-100 bg-light">
+    <div class="card border-0 shadow-lg" style="max-width: 450px; width: 100%; border-radius: 15px;">
+        <div class="card-body p-5 text-center">
+
+            <div class="mb-4">
+                <div class="icon-circle bg-primary bg-opacity-10 text-primary mx-auto d-flex align-items-center justify-content-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="bi bi-shield-lock-fill" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M8 0c-.69 0-1.843.265-2.928.56-1.11.3-2.229.655-2.887.87a1.54 1.54 0 0 0-1.044 1.262c-.596 4.477.787 7.795 2.465 9.99a11.777 11.777 0 0 0 2.517 2.453c.386.273.744.482 1.048.625.28.132.581.24.829.24s.548-.108.829-.24a7.159 7.159 0 0 0 1.048-.625 11.775 11.775 0 0 0 2.517-2.453c1.678-2.195 3.061-5.513 2.465-9.99a1.541 1.541 0 0 0-1.044-1.263 6.267 6.267 0 0 0-2.887-.87C9.843.266 8.69 0 8 0zm0 5a1.5 1.5 0 0 1 .5 2.915l.385 1.99a.5.5 0 0 1-.491.595h-.788a.5.5 0 0 1-.49-.595l.384-1.99A1.5 1.5 0 0 1 8 5z" />
+                    </svg>
+                </div>
+            </div>
+
+            <h3 class="fw-bold text-dark mb-2">Xác thực OTP</h3>
+            <p class="text-muted mb-4">
+                Vui lòng nhập mã 6 số chúng tôi vừa gửi đến email <br />
+                <strong class="text-dark">@ViewBag.Email</strong>
+            </p>
+
+            @if (ViewBag.Error != null)
+            {
+                <div class="alert alert-danger d-flex align-items-center justify-content-center py-2 fade show" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i> @ViewBag.Error
+                </div>
+            }
+
+            <form asp-action="VerifyRegister" method="post">
+                <input type="hidden" name="email" value="@ViewBag.Email" />
+
+                <div class="mb-4">
+                    <input type="text"
+                           name="otp"
+                           class="form-control form-control-lg text-center otp-input"
+                           placeholder="------"
+                           maxlength="6"
+                           autocomplete="off"
+                           required
+                           autofocus />
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100 py-2 fw-bold shadow-sm mb-3">
+                    XÁC NHẬN
+                </button>
+            </form>
+
+            <div class="text-muted small">
+                Bạn chưa nhận được mã?
+                <div id="resend-container" class="mt-1">
+                    <a href="#" class="text-decoration-none fw-bold" id="btnResend" style="pointer-events: none; color: gray;">
+                        Gửi lại (<span id="countdown">60</span>s)
+                    </a>
+                </div>
+            </div>
+
+            <div class="mt-4 border-top pt-3">
+                <a asp-action="Login" class="text-decoration-none small text-secondary">
+                    <i class="bi bi-arrow-left"></i> Quay lại Đăng nhập
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Tạo hình tròn nền cho icon */
+    .icon-circle {
+        width: 70px;
+        height: 70px;
+        border-radius: 50%;
+        background-color: #e9ecef; /* Màu nền xám nhẹ hoặc dùng class bg-opacity */
+        margin-bottom: 15px;
+    }
+
+    /* Style cho ô nhập OTP: Chữ to, giãn cách rộng */
+    .otp-input {
+        font-size: 24px;
+        font-weight: bold;
+        letter-spacing: 12px; /* Tạo cảm giác các số tách rời nhau */
+        border: 2px solid #ced4da;
+        border-radius: 10px;
+        transition: all 0.3s ease-in-out;
+    }
+
+        .otp-input:focus {
+            border-color: #0d6efd;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+            letter-spacing: 12px;
+        }
+
+        .otp-input::placeholder {
+            letter-spacing: 12px;
+            color: #adb5bd;
+        }
+</style>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        var timeLeft = 60; // Số giây chờ
+        var countdownElement = document.getElementById("countdown");
+        var btnResend = document.getElementById("btnResend");
+
+        var timerId = setInterval(function() {
+            if (timeLeft <= 0) {
+                clearInterval(timerId);
+                // Mở khóa nút gửi lại
+                countdownElement.parentElement.innerHTML = ""; // Xóa bộ đếm
+                btnResend.innerText = "Gửi lại mã ngay";
+                btnResend.style.color = "#0d6efd"; // Màu xanh primary
+                btnResend.style.pointerEvents = "auto";
+
+                // Gắn link action gửi lại mã (Bạn cần tạo Action ResendOTP trong Controller)
+                btnResend.href = '@Url.Action("ResendOTP", "Account", new { email = ViewBag.Email })';
+            } else {
+                countdownElement.innerText = timeLeft;
+                timeLeft--;
+            }
+        }, 1000);
+    });
+</script>

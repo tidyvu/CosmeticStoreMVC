@@ -1,6 +1,7 @@
-﻿using Microsoft.EntityFrameworkCore;
-using CosmeticStore.MVC.Models;
+﻿using CosmeticStore.MVC.Models;
+using CosmeticStore.MVC.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.EntityFrameworkCore;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -20,6 +21,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.AccessDeniedPath = "/Account/AccessDenied"; // <--- THÊM DÒNG NÀY
         options.ExpireTimeSpan = TimeSpan.FromDays(1);
     });
+builder.Services.AddHostedService<OrderCleanupService>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

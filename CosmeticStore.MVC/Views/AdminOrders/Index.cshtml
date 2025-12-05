@@ -3,64 +3,133 @@
 @{
     ViewData["Title"] = "Quản lý Đơn hàng";
     Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
+    // Lấy danh sách trạng thái duy nhất từ Controller (đã đặt trong ViewBag.Statuses)
+    var statuses = ViewBag.Statuses as List<string>;
 }
 
 <div class="container py-5">
     <h2 class="fw-bold mb-4 text-primary">QUẢN LÝ ĐƠN HÀNG</h2>
+    <hr />
+
+    <form asp-action="Index" method="get" class="mb-4 p-3 border rounded bg-light shadow-sm">
+        <div class="row g-3 align-items-end">
+
+            <div class="col-md-5">
+                <label for="searchQuery" class="form-label fw-bold small text-muted">Tìm kiếm (Mã ĐH, Khách hàng, SĐT)</label>
+                <input type="text" name="searchQuery" class="form-control"
+                       value="@ViewData["SearchQuery"]" placeholder="Nhập mã ĐH, tên hoặc SĐT..." />
+            </div>
+
+            <div class="col-md-4">
+                <label for="statusFilter" class="form-label fw-bold small text-muted">Lọc theo Trạng thái</label>
+                <select name="statusFilter" class="form-select">
+                    <option value="All">-- Tất cả trạng thái --</option>
+                    @if (statuses != null)
+                    {
+                        @foreach (var status in statuses.Where(s => !string.IsNullOrEmpty(s)).Distinct())
+                        {
+                            <option value="@status" selected="@(status == ViewData["StatusFilter"]?.ToString())">
+                                @{
+                                    // Hiển thị tên trạng thái bằng Tiếng Việt trong dropdown
+                                    string displayStatus = status switch
+                                    {
+                                        "Pending" =>"Chờ xử lý",
+                                        "Paid" => "Đơn hàng đã thanh toán",
+                                         // Đã thêm: Paid = Chờ xử lý
+                                        "Processing" => "Đang đóng gói",
+                                        "Shipped" => "Đang giao hàng",
+                                        "Completed" => "Đã hoàn thành",
+                                        "Cancelled" => "Đã hủy",
+                                        _ => status
+                                    };
+                                    @displayStatus
+                                }
+                            </option>
+                        }
+                    }
+                </select>
+            </div>
+
+            <div class="col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-primary flex-grow-1">Tìm kiếm/Lọc</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">Xóa lọc</a>
+            </div>
+        </div>
+    </form>
+    <hr />
 
     <div class="card shadow-sm">
         <div class="card-body">
-            <table class="table table-hover align-middle">
-                <thead class="table-dark">
-                    <tr>
-                        <th>Mã ĐH</th>
-                        <th>Ngày đặt</th>
-                        <th>Khách hàng</th>
-                        <th>Tổng tiền</th>
-                        <th>Trạng thái</th>
-                        <th>Hành động</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var item in Model)
-                    {
+
+            @if (!Model.Any())
+            {
+                <div class="alert alert-info text-center">
+                    Không tìm thấy đơn hàng nào phù hợp với điều kiện tìm kiếm/lọc.
+                </div>
+            }
+            else
+            {
+                <table class="table table-hover align-middle">
+                    <thead class="table-dark">
                         <tr>
-                            <td class="fw-bold">#@item.OrderId</td>
-                            <td>@item.OrderDate?.ToString("dd/MM/yyyy HH:mm")</td>
-                            <td>
-                                <div>@item.CustomerName</div>
-                                <small class="text-muted">@item.CustomerPhone</small>
-                            </td>
-                            <td class="text-danger fw-bold">
-                                @item.TotalAmount.ToString("#,##0") đ
-                            </td>
-                            <td>
-                                @if (item.Status == "Pending")
-                                {
-                                    <span class="badge bg-warning text-dark">Chờ xử lý</span>
-                                }
-                                else if (item.Status == "Shipped")
-                                {
-                                    <span class="badge bg-primary">Đang giao</span>
-                                }
-                                else if (item.Status == "Completed")
-                                {
-                                    <span class="badge bg-success">Hoàn thành</span>
-                                }
-                                else
-                                {
-                                    <span class="badge bg-secondary">@item.Status</span>
-                                }
-                            </td>
-                            <td>
-                                <a asp-action="Details" asp-route-id="@item.OrderId" class="btn btn-sm btn-outline-primary">
-                                    Xem chi tiết
-                                </a>
-                            </td>
+                            <th>Mã ĐH</th>
+                            <th>Ngày đặt</th>
+                            <th>Khách hàng</th>
+                            <th>Tổng tiền</th>
+                            <th>Trạng thái</th>
+                            <th>Hành động</th>
                         </tr>
-                    }
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td class="fw-bold">#@item.OrderId</td>
+                                <td>@item.OrderDate?.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>
+                                    <div>@item.CustomerName</div>
+                                    <small class="text-muted">@item.CustomerPhone</small>
+                                </td>
+                                <td class="text-danger fw-bold">
+                                    @item.TotalAmount.ToString("#,##0") đ
+                                </td>
+                                <td>
+                                    @if (item.Status == "Pending" || item.Status == "Paid")
+                                    {
+                                        <span class="badge bg-warning text-dark">Chờ xử lý</span>
+                                    }
+
+                                    else if (item.Status == "Processing")
+                                    {
+                                        <span class="badge bg-info text-white">Đang đóng gói</span>
+                                    }
+                                    else if (item.Status == "Shipped")
+                                    {
+                                        <span class="badge bg-primary">Đang giao hàng</span>
+                                    }
+                                    else if (item.Status == "Completed")
+                                    {
+                                        <span class="badge bg-success">Đã hoàn thành</span>
+                                    }
+                                    else if (item.Status == "Cancelled")
+                                    {
+                                        <span class="badge bg-danger">Đã hủy</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">@item.Status</span>
+                                    }
+                                </td>
+                                <td>
+                                    <a asp-action="Details" asp-route-id="@item.OrderId" class="btn btn-sm btn-outline-primary">
+                                        Xem chi tiết
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
         </div>
     </div>
 </div>

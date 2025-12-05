@@ -19,7 +19,9 @@ namespace CosmeticStore.MVC.Models
         public string? Address { get; set; }
         public string? PhoneNumber { get; set; }
         public string Role { get; set; } = null!;
-
+        public string? OtpCode { get; set; } // Mã OTP
+        public DateTime? OtpExpiryTime { get; set; }
+        public bool IsLocked { get; set; } = false;
         public virtual ICollection<BlogPost> BlogPosts { get; set; }
         public virtual ICollection<Order> Orders { get; set; }
         public virtual ICollection<Review> Reviews { get; set; }

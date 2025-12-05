@@ -1,0 +1,144 @@
+﻿@model CosmeticStore.MVC.Models.User
+
+@{
+    ViewData["Title"] = "Cập nhật thông tin";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    Layout = "~/Views/Shared/_LayoutAdmin.cshtml";// Hoặc _LayoutAdmin
+}
+
+<div class="container-fluid py-4 bg-light min-vh-100">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold text-dark mb-0">Cập nhật hồ sơ</h3>
+            <p class="text-muted small mb-0">Chỉnh sửa thông tin tài khoản và phân quyền</p>
+        </div>
+        <a asp-action="Index" class="btn btn-outline-secondary rounded-pill px-4 fw-bold shadow-sm">
+            <i class="bi bi-arrow-left me-2"></i> Quay lại danh sách
+        </a>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-header bg-white py-3 border-bottom-0">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="bi bi-pencil-square me-2"></i>Thông tin chi tiết
+                    </h6>
+                </div>
+
+                <div class="card-body p-4">
+                    <form asp-action="Edit">
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger rounded-3 mb-4"></div>
+
+                        <input type="hidden" asp-for="UserId" />
+                        <input type="hidden" asp-for="PasswordHash" />
+                        <input type="hidden" asp-for="OtpCode" />
+                        <input type="hidden" asp-for="OtpExpiryTime" />
+
+                        <div class="row g-4">
+                            <div class="col-md-6 border-end-md">
+                                <h6 class="text-uppercase text-muted small fw-bold mb-3">1. Thiết lập tài khoản</h6>
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold small text-secondary">Email đăng nhập</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-envelope-fill"></i></span>
+                                        <input asp-for="Email" class="form-control bg-light text-secondary border-start-0 ps-0" readonly />
+                                    </div>
+                                    <div class="form-text small">Không thể thay đổi Email.</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label asp-for="Role" class="form-label fw-bold small text-secondary">Vai trò hệ thống</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-shield-lock"></i></span>
+                                        <select asp-for="Role" class="form-select border-start-0 ps-0">
+                                            <option value="Customer">Khách hàng (Customer)</option>
+                                            <option value="Admin">Quản trị viên (Admin)</option>
+                                        </select>
+                                    </div>
+                                    <span asp-validation-for="Role" class="text-danger small"></span>
+                                </div>
+
+                                <div class="mb-3 pt-2">
+                                    <div class="card bg-light border-0 p-3 rounded-3">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" asp-for="IsLocked" id="IsLockedSwitch">
+                                            <label class="form-check-label fw-bold text-dark" for="IsLockedSwitch">
+                                                Khóa tài khoản này?
+                                            </label>
+                                        </div>
+                                        <div class="text-muted small mt-1">
+                                            Nếu bật, người dùng sẽ không thể đăng nhập vào hệ thống.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 ps-md-4">
+                                <h6 class="text-uppercase text-muted small fw-bold mb-3">2. Thông tin cá nhân</h6>
+
+                                <div class="mb-3">
+                                    <label asp-for="FullName" class="form-label fw-bold small text-secondary">Họ và tên</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-person"></i></span>
+                                        <input asp-for="FullName" class="form-control border-start-0 ps-0" placeholder="Nhập họ tên" />
+                                    </div>
+                                    <span asp-validation-for="FullName" class="text-danger small"></span>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label asp-for="PhoneNumber" class="form-label fw-bold small text-secondary">Số điện thoại</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-telephone"></i></span>
+                                        <input asp-for="PhoneNumber" class="form-control border-start-0 ps-0" placeholder="Nhập số điện thoại" />
+                                    </div>
+                                    <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label asp-for="Address" class="form-label fw-bold small text-secondary">Địa chỉ</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-geo-alt"></i></span>
+                                        <textarea asp-for="Address" class="form-control border-start-0 ps-0" rows="3" placeholder="Nhập địa chỉ..."></textarea>
+                                    </div>
+                                    <span asp-validation-for="Address" class="text-danger small"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="border-top pt-4 mt-4 text-end">
+                            <a asp-action="Index" class="btn btn-light rounded-pill px-4 me-2 fw-bold text-secondary">Hủy bỏ</a>
+                            <button type="submit" class="btn btn-primary rounded-pill px-5 fw-bold shadow-sm">
+                                <i class="bi bi-save me-1"></i> LƯU THAY ĐỔI
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Đường kẻ ngăn cách trên màn hình lớn */
+   
+
+    .input-group:focus-within {
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+        border-radius: 0.375rem;
+    }
+
+        .input-group:focus-within .form-control,
+        .input-group:focus-within .input-group-text,
+        .input-group:focus-within .form-select {
+            border-color: #0d6efd;
+        }
+</style>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

@@ -149,6 +149,15 @@
             <a asp-controller="AdminOrders" asp-action="Index" class="@(currentController == "AdminOrders" ? "active" : "")">
                 <i class="fa fa-cart-flatbed"></i> Quản lý Đơn hàng
             </a>
+
+            <a asp-controller="AdminUsers" asp-action="Index" class="@(currentController == "AdminUsers" ? "active" : "")">
+                <i class="fa fa-users"></i> Quản lý Tài khoản
+            </a>
+
+            <a asp-controller="AdminReport" asp-action="Index" class="@(currentController == "AdminReport" ? "active" : "")">
+                <i class="fa fa-chart-line"></i> Quản lý Doanh thu
+            </a>
+
             <a asp-controller="Products" asp-action="Index" class="@(currentController == "Products" ? "active" : "")">
                 <i class="fa fa-box-open"></i> Quản lý Sản phẩm
             </a>
@@ -195,15 +204,15 @@
 
             // Tự động đóng sidebar khi click vào nội dung trên mobile
             $('.content-wrapper').on('click', function() {
-                 if ($('#adminSidebar').hasClass('active') && $(window).width() < 992) {
-                     $('#adminSidebar').removeClass('active');
-                 }
+                if ($('#adminSidebar').hasClass('active') && $(window).width() < 992) {
+                    $('#adminSidebar').removeClass('active');
+                }
             });
 
             // Xử lý Summernote (nếu có các textarea cần editor)
             // $('.summernote').summernote({
-            //     height: 300,
-            //     tabsize: 2
+            //      height: 300,
+            //      tabsize: 2
             // });
         });
     </script>

@@ -1,0 +1,216 @@
+﻿@model IEnumerable<CosmeticStore.MVC.Models.User>
+
+@{
+    ViewData["Title"] = "Quản lý Khách hàng";
+    Layout = "~/Views/Shared/_Layout.cshtml"; 
+    Layout = "~/Views/Shared/_LayoutAdmin.cshtml";// Thay bằng Layout Admin của bạn
+    var culture = new System.Globalization.CultureInfo("vi-VN");
+}
+
+<div class="container-fluid py-4 bg-light min-vh-100">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold text-dark mb-0">Danh sách Khách hàng</h3>
+            <p class="text-muted small mb-0">Quản lý tài khoản và lịch sử chi tiêu</p>
+        </div>
+        <div>
+            <a asp-action="Create" class="btn btn-primary fw-bold shadow-sm rounded-pill px-4">
+                <i class="bi bi-person-plus-fill me-1"></i> Thêm mới
+            </a>
+        </div>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success border-0 shadow-sm mb-3 rounded-3">
+            <i class="bi bi-check-circle-fill me-2"></i> @TempData["Success"]
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger border-0 shadow-sm mb-3 rounded-3">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> @TempData["Error"]
+        </div>
+    }
+
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-body p-3">
+            <form asp-action="Index" method="get" class="row g-3 align-items-center">
+
+                <div class="col-md-5">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                        <input type="text" name="searchString" value="@ViewData["CurrentFilter"]"
+                               class="form-control border-start-0 ps-0 shadow-none"
+                               placeholder="Tìm theo Tên, Email hoặc SĐT..." />
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <select name="statusFilter" class="form-select border-0 bg-light fw-bold text-secondary" onchange="this.form.submit()">
+                        <option value="">-- Tất cả trạng thái --</option>
+
+                        @if (ViewData["CurrentStatus"]?.ToString() == "active")
+                        {
+                            <option value="active" selected>Đang hoạt động</option>
+                        }
+                        else
+                        {
+                            <option value="active"> Đang hoạt động</option>
+                        }
+
+                        @if (ViewData["CurrentStatus"]?.ToString() == "locked")
+                        {
+                            <option value="locked" selected> Đã bị khóa</option>
+                        }
+                        else
+                        {
+                            <option value="locked"> Đã bị khóa</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="col-md-4 text-end">
+                    <a asp-action="Index" class="btn btn-light rounded-pill px-3 text-secondary fw-bold">
+                        <i class="bi bi-arrow-counterclockwise"></i> Đặt lại
+                    </a>
+                    <button type="submit" class="btn btn-dark rounded-pill px-4 fw-bold ms-2">Tìm kiếm</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light text-secondary text-uppercase small fw-bold">
+                    <tr>
+                        <th class="ps-4 py-3">Khách hàng</th>
+                        <th class="py-3">Liên hệ</th>
+                        <th class="text-center py-3">Đơn hàng</th>
+                        <th class="text-end py-3">Tổng chi tiêu</th>
+                        <th class="text-center py-3">Trạng thái</th>
+                        <th class="text-center py-3 pe-4">Hành động</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        // Tính toán
+                        var orderCount = item.Orders?.Count ?? 0;
+                        var totalSpent = item.Orders?.Sum(o => o.TotalAmount) ?? 0;
+
+                        // VIP: Mua trên 5 triệu (Ví dụ)
+                        var isVip = totalSpent > 5000000;
+
+                        // Nếu bị khóa thì làm mờ dòng đó đi
+                        <tr class="@(item.IsLocked ? "bg-light text-muted opacity-75" : "")">
+
+                            <td class="ps-4 py-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold me-3 shadow-sm
+                                             @(isVip ? "bg-warning text-dark" : "bg-primary bg-opacity-10 text-primary")"
+                                         style="width: 45px; height: 45px;">
+                                        @(item.FullName?.FirstOrDefault() ?? 'U')
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold text-dark">
+                                            @item.FullName
+                                            @if (isVip)
+                                            {
+                                                <i class="bi bi-patch-check-fill text-warning ms-1" title="VIP Member"></i>
+                                            }
+                                        </div>
+                                        <div class="small text-muted">ID: #@item.UserId</div>
+                                    </div>
+                                </div>
+                            </td>
+
+                            <td>
+                                <div class="small fw-bold text-dark">@item.Email</div>
+                                <div class="small text-muted">@(item.PhoneNumber ?? "---")</div>
+                            </td>
+
+                            <td class="text-center">
+                                <span class="badge bg-light text-dark border rounded-pill px-3">
+                                    @orderCount đơn
+                                </span>
+                            </td>
+
+                            <td class="text-end fw-bold">
+                                <span class="@(isVip ? "text-success" : "text-dark")">
+                                    @totalSpent.ToString("#,##0", culture) đ
+                                </span>
+                            </td>
+
+                            <td class="text-center">
+                                @if (item.IsLocked)
+                                {
+                                    <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3 border border-danger border-opacity-25">
+                                        <i class="bi bi-lock-fill me-1"></i> Đã khóa
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 border border-success border-opacity-25">
+                                        <i class="bi bi-check-circle-fill me-1"></i> Hoạt động
+                                    </span>
+                                }
+                            </td>
+
+                            <td class="text-center pe-4">
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-light border rounded-pill px-3 dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                        Thao tác
+                                    </button>
+                                    <ul class="dropdown-menu shadow border-0">
+                                        <li>
+                                            <a class="dropdown-item" asp-action="Details" asp-route-id="@item.UserId">
+                                                <i class="bi bi-eye me-2 text-info"></i> Xem chi tiết
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" asp-action="Edit" asp-route-id="@item.UserId">
+                                                <i class="bi bi-pencil me-2 text-primary"></i> Chỉnh sửa
+                                            </a>
+                                        </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <form asp-action="ToggleLock" method="post" class="d-inline">
+                                                <input type="hidden" name="id" value="@item.UserId" />
+                                                @if (item.IsLocked)
+                                                {
+                                                    <button type="submit" class="dropdown-item text-success fw-bold" onclick="return confirm('Mở khóa tài khoản này?')">
+                                                        <i class="bi bi-unlock-fill me-2"></i> Mở khóa tài khoản
+                                                    </button>
+                                                }
+                                                else
+                                                {
+                                                    <button type="submit" class="dropdown-item text-danger fw-bold" onclick="return confirm('Bạn có chắc chắn muốn KHÓA tài khoản này?')">
+                                                        <i class="bi bi-lock-fill me-2"></i> Khóa tài khoản
+                                                    </button>
+                                                }
+                                            </form>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            @if (!Model.Any())
+            {
+                <div class="text-center py-5">
+                    <img src="https://cdn-icons-png.flaticon.com/512/7486/7486744.png" width="60" class="mb-3 opacity-25" />
+                    <p class="text-muted mb-0">Không tìm thấy tài khoản nào phù hợp.</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+}

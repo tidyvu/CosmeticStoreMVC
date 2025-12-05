@@ -1,0 +1,166 @@
+﻿@model CosmeticStore.MVC.Models.User
+
+@{
+    ViewData["Title"] = "Thêm người dùng mới";
+    Layout = "~/Views/Shared/_Layout.cshtml"; 
+    Layout = "~/Views/Shared/_LayoutAdmin.cshtml";// Hoặc _LayoutAdmin
+}
+
+<div class="container-fluid py-4 bg-light min-vh-100">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold text-dark mb-0">Thêm người dùng mới</h3>
+            <p class="text-muted small mb-0">Điền thông tin để tạo tài khoản mới vào hệ thống</p>
+        </div>
+        <a asp-action="Index" class="btn btn-outline-secondary rounded-pill px-4 fw-bold shadow-sm">
+            <i class="bi bi-arrow-left me-2"></i> Quay lại danh sách
+        </a>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-header bg-white py-3 border-bottom-0">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="bi bi-person-plus-fill me-2"></i>Thông tin tài khoản
+                    </h6>
+                </div>
+
+                <div class="card-body p-4">
+                    <form asp-action="Create">
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger rounded-3 mb-4"></div>
+
+                        <div class="row g-4">
+                            <div class="col-md-6 border-end-md">
+                                <h6 class="text-uppercase text-muted small fw-bold mb-3">1. Thông tin đăng nhập</h6>
+
+                                <div class="mb-3">
+                                    <label asp-for="Email" class="form-label fw-bold small text-secondary">Email <span class="text-danger">*</span></label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light border-end-0"><i class="bi bi-envelope"></i></span>
+                                        <input asp-for="Email" class="form-control border-start-0 ps-0" placeholder="name@example.com" required />
+                                    </div>
+                                    <span asp-validation-for="Email" class="text-danger small"></span>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold small text-secondary">Mật khẩu <span class="text-danger">*</span></label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light border-end-0"><i class="bi bi-lock"></i></span>
+                                        <input asp-for="PasswordHash" type="password" id="passwordInput" class="form-control border-start-0 border-end-0 ps-0" placeholder="Nhập mật khẩu" required />
+                                        <span class="input-group-text bg-white border-start-0 cursor-pointer" onclick="togglePassword()">
+                                            <i class="bi bi-eye-slash" id="toggleIcon"></i>
+                                        </span>
+                                    </div>
+                                    <span asp-validation-for="PasswordHash" class="text-danger small"></span>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label asp-for="Role" class="form-label fw-bold small text-secondary">Vai trò <span class="text-danger">*</span></label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light border-end-0"><i class="bi bi-shield-check"></i></span>
+                                        <select asp-for="Role" class="form-select border-start-0 ps-0">
+                                            <option value="Customer">Khách hàng (Customer)</option>
+                                            <option value="Admin">Quản trị viên (Admin)</option>
+                                        </select>
+                                    </div>
+                                    <span asp-validation-for="Role" class="text-danger small"></span>
+                                </div>
+
+                                <div class="mb-3 pt-2">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" asp-for="IsLocked" id="IsLocked">
+                                        <label class="form-check-label fw-bold text-secondary" for="IsLocked">Khóa tài khoản ngay khi tạo?</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 ps-md-4">
+                                <h6 class="text-uppercase text-muted small fw-bold mb-3">2. Thông tin cá nhân</h6>
+
+                                <div class="mb-3">
+                                    <label asp-for="FullName" class="form-label fw-bold small text-secondary">Họ và tên</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light border-end-0"><i class="bi bi-person"></i></span>
+                                        <input asp-for="FullName" class="form-control border-start-0 ps-0" placeholder="Nhập họ tên đầy đủ" />
+                                    </div>
+                                    <span asp-validation-for="FullName" class="text-danger small"></span>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label asp-for="PhoneNumber" class="form-label fw-bold small text-secondary">Số điện thoại</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light border-end-0"><i class="bi bi-telephone"></i></span>
+                                        <input asp-for="PhoneNumber" class="form-control border-start-0 ps-0" placeholder="Nhập số điện thoại" />
+                                    </div>
+                                    <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label asp-for="Address" class="form-label fw-bold small text-secondary">Địa chỉ</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light border-end-0"><i class="bi bi-geo-alt"></i></span>
+                                        <textarea asp-for="Address" class="form-control border-start-0 ps-0" rows="3" placeholder="Nhập địa chỉ liên hệ..."></textarea>
+                                    </div>
+                                    <span asp-validation-for="Address" class="text-danger small"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="border-top pt-4 mt-4 text-end">
+                            <a asp-action="Index" class="btn btn-light rounded-pill px-4 me-2 fw-bold text-secondary">Hủy bỏ</a>
+                            <button type="submit" class="btn btn-primary rounded-pill px-5 fw-bold shadow-sm">
+                                <i class="bi bi-check-circle-fill me-2"></i> TẠO TÀI KHOẢN
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function togglePassword() {
+        const passwordInput = document.getElementById('passwordInput');
+        const icon = document.getElementById('toggleIcon');
+
+        if (passwordInput.type === 'password') {
+            passwordInput.type = 'text';
+            icon.classList.remove('bi-eye-slash');
+            icon.classList.add('bi-eye');
+        } else {
+            passwordInput.type = 'password';
+            icon.classList.remove('bi-eye');
+            icon.classList.add('bi-eye-slash');
+        }
+    }
+</script>
+
+<style>
+    .cursor-pointer {
+        cursor: pointer;
+    }
+
+    /* Đường kẻ giữa 2 cột trên màn hình lớn */
+   
+
+    /* Hiệu ứng focus input */
+    .input-group:focus-within {
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+        border-radius: 0.375rem;
+    }
+
+        .input-group:focus-within .form-control,
+        .input-group:focus-within .input-group-text,
+        .input-group:focus-within .form-select {
+            border-color: #0d6efd;
+        }
+</style>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

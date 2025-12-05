@@ -1,35 +1,145 @@
 ﻿@model CosmeticStore.MVC.Models.User
 @{
-    ViewData["Title"] = "Đăng ký";
+    ViewData["Title"] = "Đăng ký thành viên";
+    Layout = "_Layout";
 }
 
-<div class="container py-5" style="max-width: 500px;">
-    <h2 class="text-center fw-bold mb-4">ĐĂNG KÝ TÀI KHOẢN</h2>
-    <form asp-action="Register" class="card p-4 shadow-sm">
-        <div class="mb-3">
-            <label class="form-label">Họ tên</label>
-            <input asp-for="FullName" class="form-control" required />
+<div class="container d-flex justify-content-center align-items-center min-vh-100 bg-light py-5">
+
+    <div class="card border-0 shadow-lg rounded-4 overflow-hidden" style="max-width: 550px; width: 100%;">
+        <div class="card-body p-5">
+
+            <div class="text-center mb-4">
+                <h3 class="fw-bold text-dark">TẠO TÀI KHOẢN</h3>
+                <p class="text-muted small">Điền thông tin bên dưới để tham gia cùng chúng tôi</p>
+            </div>
+
+            @if (!ViewData.ModelState.IsValid)
+            {
+                <div class="alert alert-danger d-flex align-items-center p-2 mb-3 small" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <div>Vui lòng kiểm tra lại thông tin bên dưới.</div>
+                </div>
+            }
+
+            <form asp-action="Register" method="post">
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold small text-secondary">Họ và tên <span class="text-danger">*</span></label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white text-muted border-end-0"><i class="bi bi-person"></i></span>
+                        <input asp-for="FullName" class="form-control border-start-0 ps-0" placeholder="Ví dụ: Nguyễn Văn A" />
+                    </div>
+                    <span asp-validation-for="FullName" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold small text-secondary">Email <span class="text-danger">*</span></label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white text-muted border-end-0"><i class="bi bi-envelope"></i></span>
+                        <input asp-for="Email" type="email" class="form-control border-start-0 ps-0" placeholder="name@example.com" />
+                    </div>
+                    <span asp-validation-for="Email" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold small text-secondary">Mật khẩu <span class="text-danger">*</span></label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white text-muted border-end-0"><i class="bi bi-lock"></i></span>
+                        <input asp-for="PasswordHash" type="password" id="passwordInput" class="form-control border-start-0 border-end-0 ps-0" placeholder="Nhập mật khẩu bảo mật" />
+                        <span class="input-group-text bg-white border-start-0 cursor-pointer" onclick="toggleRegisterPassword()">
+                            <i class="bi bi-eye-slash" id="toggleIcon"></i>
+                        </span>
+                    </div>
+                    <span asp-validation-for="PasswordHash" class="text-danger small"></span>
+                    <div class="form-text small text-muted fst-italic ms-1">Mật khẩu nên có ít nhất 6 ký tự.</div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold small text-secondary">Số điện thoại</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white text-muted border-end-0"><i class="bi bi-telephone"></i></span>
+                        <input asp-for="PhoneNumber" class="form-control border-start-0 ps-0" placeholder="09xxxxxxx" />
+                    </div>
+                    <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-bold small text-secondary">Địa chỉ giao hàng</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white text-muted border-end-0"><i class="bi bi-geo-alt"></i></span>
+                        <input asp-for="Address" class="form-control border-start-0 ps-0" placeholder="Số nhà, đường, quận/huyện..." />
+                    </div>
+                    <span asp-validation-for="Address" class="text-danger small"></span>
+                </div>
+
+                <button type="submit" class="btn btn-dark w-100 py-2 fs-6 fw-bold rounded-3 shadow-sm transition-btn">
+                    ĐĂNG KÝ & GỬI OTP
+                </button>
+
+                <div class="text-center mt-4 border-top pt-3">
+                    <p class="small text-muted mb-0">Bạn đã có tài khoản?</p>
+                    <a asp-action="Login" class="text-decoration-none fw-bold text-primary hover-link">
+                        Đăng nhập ngay
+                    </a>
+                </div>
+            </form>
         </div>
-        <div class="mb-3">
-            <label class="form-label">Email</label>
-            <input asp-for="Email" type="email" class="form-control" required />
-            <span asp-validation-for="Email" class="text-danger"></span>
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Mật khẩu</label>
-            <input asp-for="PasswordHash" type="password" class="form-control" required />
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Địa chỉ</label>
-            <input asp-for="Address" class="form-control" />
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Số điện thoại</label>
-            <input asp-for="PhoneNumber" class="form-control" />
-        </div>
-        <button type="submit" class="btn btn-dark w-100">ĐĂNG KÝ</button>
-        <div class="mt-3 text-center">
-            Đã có tài khoản? <a asp-action="Login">Đăng nhập ngay</a>
-        </div>
-    </form>
+    </div>
 </div>
+
+<style>
+    body {
+        background-color: #f0f2f5;
+    }
+
+    /* Hiệu ứng focus cho input group */
+    .input-group:focus-within {
+        box-shadow: 0 0 0 0.25rem rgba(33, 37, 41, 0.15); /* Màu bóng xám đen */
+        border-radius: 0.375rem;
+    }
+
+        .input-group:focus-within .form-control,
+        .input-group:focus-within .input-group-text {
+            border-color: #212529;
+        }
+
+    .cursor-pointer {
+        cursor: pointer;
+    }
+
+    .transition-btn {
+        transition: transform 0.2s;
+    }
+
+        .transition-btn:hover {
+            transform: translateY(-2px);
+        }
+
+    .hover-link:hover {
+        text-decoration: underline !important;
+    }
+</style>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <script>
+        function toggleRegisterPassword() {
+            const passwordInput = document.getElementById('passwordInput');
+            const icon = document.getElementById('toggleIcon');
+
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                icon.classList.remove('bi-eye-slash');
+                icon.classList.add('bi-eye');
+            } else {
+                passwordInput.type = 'password';
+                icon.classList.remove('bi-eye');
+                icon.classList.add('bi-eye-slash');
+            }
+        }
+    </script>
+}

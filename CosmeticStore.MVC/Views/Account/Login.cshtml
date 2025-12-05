@@ -1,29 +1,122 @@
 ﻿@{
-    ViewData["Title"] = "Đăng nhập";
+    ViewData["Title"] = "Đăng nhập hệ thống";
+    Layout = "_Layout";
 }
 
-<div class="container py-5" style="max-width: 400px;">
-    <h2 class="text-center fw-bold mb-4">ĐĂNG NHẬP</h2>
+<div class="container d-flex justify-content-center align-items-center min-vh-100 bg-light">
 
-    @if (ViewBag.Error != null)
-    {
-        <div class="alert alert-danger">@ViewBag.Error</div>
+    <div class="card border-0 shadow-lg rounded-4 overflow-hidden" style="max-width: 450px; width: 100%;">
+        <div class="card-body p-5">
+
+            <div class="text-center mb-4">
+                <div class="d-inline-flex align-items-center justify-content-center bg-dark text-white rounded-circle mb-3" style="width: 60px; height: 60px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" fill="currentColor" class="bi bi-person-fill" viewBox="0 0 16 16">
+                        <path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1H3zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />
+                    </svg>
+                </div>
+                <h3 class="fw-bold text-dark">CHÀO MỪNG TRỞ LẠI</h3>
+                <p class="text-secondary small">Vui lòng đăng nhập để tiếp tục</p>
+            </div>
+
+            @if (ViewBag.Error != null)
+            {
+                <div class="alert alert-danger d-flex align-items-center p-2 mb-3 small" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <div>@ViewBag.Error</div>
+                </div>
+            }
+
+            <form asp-action="Login" method="post">
+                <input type="hidden" name="returnUrl" value="@ViewData["ReturnUrl"]" />
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold small text-secondary">Email</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white text-muted border-end-0"><i class="bi bi-envelope"></i></span>
+                        <input name="email" type="email" class="form-control border-start-0 ps-0" placeholder="name@example.com" required />
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <label class="form-label fw-bold small text-secondary">Mật khẩu</label>
+                        <a asp-action="ForgotPassword" class="text-decoration-none small text-primary fw-bold">Quên mật khẩu?</a>
+                    </div>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white text-muted border-end-0"><i class="bi bi-lock"></i></span>
+                        <input name="password" type="password" id="password" class="form-control border-start-0 border-end-0 ps-0" placeholder="Nhập mật khẩu" required />
+                        <span class="input-group-text bg-white border-start-0 cursor-pointer" onclick="togglePassword()">
+                            <i class="bi bi-eye-slash" id="toggleIcon"></i>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="mb-4 form-check">
+                    <input type="checkbox" class="form-check-input" id="rememberMe" name="rememberMe">
+                    <label class="form-check-label small text-secondary" for="rememberMe">Ghi nhớ đăng nhập</label>
+                </div>
+
+                <button type="submit" class="btn btn-dark w-100 py-2 fs-6 fw-bold rounded-3 shadow-sm transition-btn">
+                    ĐĂNG NHẬP
+                </button>
+
+                <div class="text-center mt-4 border-top pt-3">
+                    <p class="small text-muted mb-0">Chưa có tài khoản?</p>
+                    <a asp-action="Register" class="text-decoration-none fw-bold text-primary hover-link">
+                        Tạo tài khoản mới
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    body {
+        background-color: #f0f2f5;
     }
 
-    <form asp-action="Login" method="post" class="card p-4 shadow-sm">
-        <input type="hidden" name="returnUrl" value="@ViewData["ReturnUrl"]" />
+    /* Hiệu ứng focus cho input group */
+    .input-group:focus-within {
+        box-shadow: 0 0 0 0.25rem rgba(33, 37, 41, 0.15); /* Màu bóng theo btn-dark */
+        border-radius: 0.375rem;
+    }
 
-        <div class="mb-3">
-            <label class="form-label">Email</label>
-            <input name="email" type="email" class="form-control" required />
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Mật khẩu</label>
-            <input name="password" type="password" class="form-control" required />
-        </div>
-        <button type="submit" class="btn btn-dark w-100">ĐĂNG NHẬP</button>
-        <div class="mt-3 text-center">
-            Chưa có tài khoản? <a asp-action="Register">Đăng ký ngay</a>
-        </div>
-    </form>
-</div>
+        .input-group:focus-within .form-control,
+        .input-group:focus-within .input-group-text {
+            border-color: #212529; /* Màu viền khi active */
+        }
+
+    .cursor-pointer {
+        cursor: pointer;
+    }
+
+    .transition-btn {
+        transition: transform 0.2s;
+    }
+
+        .transition-btn:hover {
+            transform: translateY(-2px);
+        }
+
+    .hover-link:hover {
+        text-decoration: underline !important;
+    }
+</style>
+
+<script>
+    function togglePassword() {
+        const passwordInput = document.getElementById('password');
+        const toggleIcon = document.getElementById('toggleIcon');
+
+        if (passwordInput.type === 'password') {
+            passwordInput.type = 'text';
+            toggleIcon.classList.remove('bi-eye-slash');
+            toggleIcon.classList.add('bi-eye');
+        } else {
+            passwordInput.type = 'password';
+            toggleIcon.classList.remove('bi-eye');
+            toggleIcon.classList.add('bi-eye-slash');
+        }
+    }
+</script>

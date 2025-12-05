@@ -2,23 +2,51 @@
 @using CosmeticStore.MVC.Helpers
 @using CosmeticStore.MVC.Models
 @using Microsoft.EntityFrameworkCore
+@using System.Security.Claims
 @inject CosmeticStore.MVC.Models.CosmeticStoreContext _context
 
 @{
-    // Lấy danh sách hàng trong Session ra để đếm
-    var cart = Context.Session.Get<List<CartItem>>("Cart") ?? new List<CartItem>();
-    // Tính tổng số lượng sản phẩm
-    int cartCount = cart.Sum(x => x.Quantity);
-}
-@{
+    // =========================================================================
+    // LOGIC TÍNH SỐ LƯỢNG GIỎ HÀNG (HIỂN THỊ TRÊN MENU)
+    // =========================================================================
+    int cartCount = 0;
+
+    if (User.Identity.IsAuthenticated)
+    {
+        // 1. Nếu đã đăng nhập: Lấy số lượng từ Database
+        var userIdClaim = User.FindFirst("UserId");
+        if (userIdClaim != null && int.TryParse(userIdClaim.Value, out int userId))
+        {
+            // Dùng try-catch nhẹ để tránh lỗi nếu bảng chưa tạo xong
+            try
+            {
+                cartCount = _context.Carts
+                    .Where(c => c.UserId == userId)
+                    .Sum(c => c.Quantity);
+            }
+            catch { cartCount = 0; }
+        }
+    }
+    else
+    {
+        // 2. Nếu chưa đăng nhập: Lấy số lượng từ Session
+        var cart = Context.Session.Get<List<CartItem>>("Cart") ?? new List<CartItem>();
+        cartCount = cart.Sum(x => x.Quantity);
+    }
+
+    // =========================================================================
+    // CÁC BIẾN GIAO DIỆN
+    // =========================================================================
     var isAuthenticated = User?.Identity?.IsAuthenticated ?? false;
     var userName = User?.Identity?.Name ?? "";
-    // Định nghĩa màu chủ đạo mới từ yêu cầu: #d14d5a
+
+    // Màu chủ đạo
     string brandColor = "#d14d5a";
-    string secondaryColor = "#e06c75"; // Màu sáng hơn, dùng cho tiêu đề footer
-    string socialIconBgColor = "#5f8a65"; // Màu xanh rêu cho Social Icons (giữ nguyên theo CSS cũ)
-    string messengerColor = "#0084ff"; // Màu xanh Messenger (giữ nguyên)
+    string secondaryColor = "#e06c75";
+    string socialIconBgColor = "#5f8a65";
+    string messengerColor = "#0084ff";
 }
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -33,9 +61,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
 
     <style>
-        /* ------------------------------------------------------------------ */
-        /* CSS CHO HEADER (Smart Header) */
-        /* ------------------------------------------------------------------ */
         .navbar {
             transition: transform 0.3s ease-in-out;
         }
@@ -55,9 +80,6 @@
             padding-top: 70px;
         }
 
-        /* ------------------------------------------------------------------ */
-        /* CSS CHO FOOTER */
-        /* ------------------------------------------------------------------ */
         .site-footer {
             background-color: #f7f7f7;
             color: #333;
@@ -79,7 +101,6 @@
             margin-bottom: 20px;
         }
 
-            /* Cập nhật màu tiêu đề footer theo yêu cầu #e06c75 (màu brand cũ) */
             .footer-col h3, .footer-col h4 {
                 color: @secondaryColor;
                 margin-bottom: 15px;
@@ -111,7 +132,6 @@
                     transition: color 0.3s;
                 }
 
-                    /* Cập nhật màu hover link theo yêu cầu #d14d5a (màu brand mới) */
                     .footer-col ul li a:hover, .footer-contact p a:hover {
                         color: @brandColor;
                         text-decoration: underline;
@@ -126,7 +146,6 @@
             box-sizing: border-box;
         }
 
-        /* Cập nhật màu nút Đăng ký theo yêu cầu #e06c75 */
         .footer-newsletter button {
             background-color: @secondaryColor;
             color: white;
@@ -138,7 +157,6 @@
             transition: background-color 0.3s;
         }
 
-            /* Cập nhật màu hover nút Đăng ký theo yêu cầu #d14d5a */
             .footer-newsletter button:hover {
                 background-color: @brandColor;
             }
@@ -156,9 +174,6 @@
                 color: #888;
             }
 
-        /* ------------------------------------------------------------------ */
-        /* CSS CHO SOCIAL ICONS & CHAT ICON (DÙNG SVG) */
-        /* ------------------------------------------------------------------ */
         .social-icons {
             margin-top: 20px;
             display: flex;
@@ -171,8 +186,8 @@
             align-items: center;
             width: 48px;
             height: 48px;
-            border-radius: 8px; /* Vuông bo góc */
-            background-color: @socialIconBgColor; /* Màu xanh rêu */
+            border-radius: 8px;
+            background-color: @socialIconBgColor;
             transition: opacity 0.3s ease;
             text-decoration: none;
         }
@@ -181,14 +196,12 @@
                 opacity: 0.8;
             }
 
-            /* Định dạng cho thẻ SVG bên trong */
             .social-icon svg {
                 width: 24px;
                 height: 24px;
-                fill: white; /* Tô màu trắng cho icon */
+                fill: white;
             }
 
-        /* Chat Icon Style */
         .chat-icon {
             position: fixed;
             bottom: 25px;
@@ -217,21 +230,27 @@
                 fill: white;
             }
 
-        /* Responsive */
-       
-
-        .chat-icon {
-            width: 50px;
-            height: 50px;
-            bottom: 15px;
-            right: 15px;
-        }
-
-            .chat-icon svg {
-                width: 24px;
-                height: 24px;
+        @@media (max-width: 768px) {
+            .footer-col {
+                flex-basis: 100%;
+                text-align: center;
             }
 
+            .social-icons {
+                justify-content: center;
+            }
+
+            .chat-icon {
+                width: 50px;
+                height: 50px;
+                bottom: 15px;
+                right: 15px;
+            }
+
+                .chat-icon svg {
+                    width: 24px;
+                    height: 24px;
+                }
         }
     </style>
 </head>
@@ -252,21 +271,32 @@
                     <ul class="navbar-nav flex-grow-1">
                         <li class="nav-item"><a class="nav-link text-dark fw-bold text-uppercase mx-2" asp-controller="Home" asp-action="Index">Trang chủ</a></li>
                         <li class="nav-item"><a class="nav-link text-dark fw-bold text-uppercase mx-2" asp-controller="Home" asp-action="Privacy">Chính sách</a></li>
-
                         <li class="nav-item"><a class="nav-link text-dark fw-bold text-uppercase mx-2" asp-controller="Home" asp-action="StoreLocator">Hệ thống cửa hàng</a></li>
                     </ul>
+
                     <li class="nav-item" style="list-style: none;">
-                        <a class="nav-link text-dark" asp-controller="Cart" asp-action="Index">
-                            <i class="fa fa-shopping-cart"></i> Giỏ hàng <span class="badge bg-danger">@cartCount</span>
+                        <a class="nav-link text-dark position-relative" asp-controller="Cart" asp-action="Index">
+                            <i class="fa fa-shopping-cart fa-lg"></i> Giỏ hàng
+                            @if (cartCount > 0)
+                            {
+                                <span class="position-absolute top-10 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.7rem;">
+                                    @cartCount
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">0</span>
+                            }
                         </a>
                     </li>
+
                     @if (isAuthenticated)
                     {
-                        <li class="nav-item dropdown" style="list-style: none;">
+                        <li class="nav-item dropdown ms-3" style="list-style: none;">
                             <a class="nav-link dropdown-toggle text-dark fw-bold" href="#" role="button" data-bs-toggle="dropdown">
                                 Xin chào, @User.Identity.Name
                             </a>
-                            <ul class="dropdown-menu">
+                            <ul class="dropdown-menu dropdown-menu-end">
                                 <li>
                                     <a class="dropdown-item" asp-controller="Account" asp-action="Profile">
                                         <i class="fa fa-user me-2"></i> Thông tin cá nhân
@@ -284,12 +314,17 @@
                     }
                     else
                     {
-                        <li class="nav-item" style="list-style: none;"><a class="nav-link text-dark" asp-controller="Account" asp-action="Login">Đăng nhập</a></li>
+                        <li class="nav-item ms-3" style="list-style: none;"><a class="nav-link text-dark" asp-controller="Account" asp-action="Login">Đăng nhập</a></li>
                         <li class="nav-item" style="list-style: none;"><a class="nav-link text-dark" asp-controller="Account" asp-action="Register">Đăng ký</a></li>
                     }
+
                     @if (User.IsInRole("Admin"))
                     {
-                        <li class="nav-item" style="list-style: none;"><a class="nav-link text-danger fw-bold" asp-controller="Admin" asp-action="Index"><i class="fa fa-cogs"></i> QUẢN TRỊ</a></li>
+                        <li class="nav-item ms-2" style="list-style: none;">
+                            <a class="nav-link text-danger fw-bold border border-danger rounded px-3" asp-controller="Admin" asp-action="Index">
+                                <i class="fa fa-cogs"></i> QUẢN TRỊ
+                            </a>
+                        </li>
                     }
                 </div>
             </div>
@@ -308,7 +343,7 @@
                 <h3>DCD Cosmetic</h3>
                 <p class="slogan">Không phải những người đẹp là những người hạnh phúc, mà những người hạnh phúc mới là những người đẹp.</p>
                 <h4>Thông tin liên hệ</h4>
-                <p><strong>Địa chỉ:</strong> 296 Lĩnh Nam, Phường Lĩnh Nam, Quận Hoàng Mai, TP. Hà Nộih</p>
+                <p><strong>Địa chỉ:</strong> 296 Lĩnh Nam, Phường Lĩnh Nam, Quận Hoàng Mai, TP. Hà Nội</p>
                 <p><strong>Điện thoại:</strong> <a href="tel:0379077450">0379077450</a></p>
                 <p><strong>Email:</strong> <a href="mailto:babooan01@gmail.com">babooan01@gmail.com</a></p>
             </div>

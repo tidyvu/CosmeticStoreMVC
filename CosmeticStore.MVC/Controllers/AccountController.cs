@@ -1,151 +1,385 @@
-﻿using CosmeticStore.MVC.Helpers;
+﻿using Microsoft.AspNetCore.Mvc;
 using CosmeticStore.MVC.Models;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
+using CosmeticStore.MVC.Helpers;
+using System;
+using System.Collections.Generic;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
+using Microsoft.AspNetCore.Http;
+using Newtonsoft.Json;
 
 namespace CosmeticStore.MVC.Controllers
 {
     public class AccountController : Controller
     {
         private readonly CosmeticStoreContext _context;
+        private readonly IConfiguration _configuration;
+        private readonly EmailService _emailService;
 
-        public AccountController(CosmeticStoreContext context)
+        public AccountController(CosmeticStoreContext context, IConfiguration configuration)
         {
             _context = context;
+            _configuration = configuration;
+            _emailService = new EmailService(configuration);
         }
 
+        // ============================================================
         // 1. ĐĂNG KÝ
+        // ============================================================
         public IActionResult Register() => View();
-        public IActionResult AccessDenied()
-        {
-            return View();
-        }
+
+        public IActionResult AccessDenied() => View();
 
         [HttpPost]
         public async Task<IActionResult> Register(User user)
         {
-            // Kiểm tra Email đã tồn tại chưa
             if (await _context.Users.AnyAsync(u => u.Email == user.Email))
             {
                 ModelState.AddModelError("Email", "Email này đã được sử dụng.");
                 return View(user);
             }
 
-            // Lưu người dùng mới (Lưu ý: Mật khẩu nên mã hóa, ở đây demo lưu thô)
-            user.Role = "Customer"; // Mặc định là khách hàng
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
+            // Hash mật khẩu & Set quyền
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(user.PasswordHash);
+            user.Role = "Customer";
+            user.IsLocked = false; // Mặc định không khóa
 
-            return RedirectToAction("Login");
+            // Tạo OTP
+            string otp = new Random().Next(100000, 999999).ToString();
+
+            // Lưu User và OTP vào Session
+            HttpContext.Session.SetString("PendingUser", JsonConvert.SerializeObject(user));
+            HttpContext.Session.SetString("RegisterOTP", otp);
+
+            // Gửi Email
+            string subject = "[CosmeticStore] Mã xác thực đăng ký";
+            string body = $"Chào bạn,<br/>Mã xác thực (OTP) của bạn là: <b style='color:red; font-size:20px'>{otp}</b>.<br/>Mã này có hiệu lực trong phiên làm việc hiện tại.";
+
+            try
+            {
+                await _emailService.SendEmailAsync(user.Email, subject, body);
+            }
+            catch (Exception ex)
+            {
+                ModelState.AddModelError("", "Lỗi gửi mail: " + ex.Message);
+                return View(user);
+            }
+
+            TempData["SuccessMessage"] = "Mã xác thực đã được gửi đến Email của bạn.";
+            return RedirectToAction("VerifyRegister");
         }
 
-        // 2. ĐĂNG NHẬP
+        [HttpGet]
+        public IActionResult VerifyRegister() => View();
+
+        [HttpPost]
+        public async Task<IActionResult> VerifyRegister(string otp)
+        {
+            var sessionOtp = HttpContext.Session.GetString("RegisterOTP");
+            var pendingUserJson = HttpContext.Session.GetString("PendingUser");
+
+            if (string.IsNullOrEmpty(sessionOtp) || string.IsNullOrEmpty(pendingUserJson))
+            {
+                TempData["ErrorMessage"] = "Phiên giao dịch hết hạn. Vui lòng đăng ký lại.";
+                return RedirectToAction("Register");
+            }
+
+            if (otp == sessionOtp)
+            {
+                var user = JsonConvert.DeserializeObject<User>(pendingUserJson);
+                _context.Users.Add(user);
+                await _context.SaveChangesAsync();
+
+                HttpContext.Session.Remove("RegisterOTP");
+                HttpContext.Session.Remove("PendingUser");
+
+                TempData["SuccessMessage"] = "Đăng ký thành công! Vui lòng đăng nhập.";
+                return RedirectToAction("Login");
+            }
+            else
+            {
+                ViewBag.Error = "Mã OTP không chính xác.";
+                return View();
+            }
+        }
+
+        // ============================================================
+        // 2. ĐĂNG NHẬP (ĐÃ CẬP NHẬT LOGIC KHÓA & SESSION)
+        // ============================================================
         public IActionResult Login(string returnUrl = "/")
         {
-            ViewData["ReturnUrl"] = returnUrl; // Lưu lại trang khách muốn vào để chuyển hướng sau khi login xong
+            ViewData["ReturnUrl"] = returnUrl;
             return View();
         }
 
         [HttpPost]
         public async Task<IActionResult> Login(string email, string password, string returnUrl = "/")
         {
-            // Tìm user trong DB
-            var user = await _context.Users
-        .FirstOrDefaultAsync(u => u.Email == email && u.PasswordHash == password);
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
 
-            if (user == null)
+            // 1. Kiểm tra Email và Pass
+            if (user == null || !BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
             {
                 ViewBag.Error = "Email hoặc mật khẩu không đúng.";
                 return View();
             }
 
-            // 2. Tạo Claims để đăng nhập
+            // 2. [MỚI] Kiểm tra tài khoản bị khóa
+            if (user.IsLocked)
+            {
+                ViewBag.Error = "Tài khoản của bạn đã bị khóa vi phạm chính sách. Vui lòng liên hệ Admin.";
+                return View();
+            }
+
+            // 3. Tạo Claims cho Cookie Auth (Dùng cho [Authorize])
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.Name, user.FullName ?? user.Email),
                 new Claim(ClaimTypes.Email, user.Email),
-                new Claim("UserId", user.UserId.ToString()), // Lưu UserID để dùng sau này
+                new Claim("UserId", user.UserId.ToString()),
                 new Claim(ClaimTypes.Role, user.Role)
             };
 
             var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
             var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
-
             await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, claimsPrincipal);
 
-            var sessionCart = HttpContext.Session.Get<List<CartItem>>("Cart");
+            // 4. [MỚI] Lưu Session (Dùng cho AdminUsersController kiểm tra quyền)
+            HttpContext.Session.SetString("UserID", user.UserId.ToString());
+            HttpContext.Session.SetString("UserEmail", user.Email);
+            HttpContext.Session.SetString("UserRole", user.Role ?? "Customer"); // Bắt buộc để Admin vào được trang quản lý
+            HttpContext.Session.SetString("UserName", user.FullName ?? user.Email);
 
+            // 5. Xử lý giỏ hàng từ Session vào DB
+            var sessionCart = HttpContext.Session.Get<List<CartItem>>("Cart");
             if (sessionCart != null && sessionCart.Count > 0)
             {
-                // Duyệt qua từng món trong Session để chuyển vào Database của User này
                 foreach (var item in sessionCart)
                 {
-                    // Kiểm tra xem món này đã có trong DB của user chưa
                     var dbItem = await _context.Carts
-                        .FirstOrDefaultAsync(c => c.UserId == user.UserId && c.ProductId == item.ProductId);
+                        .FirstOrDefaultAsync(c => c.UserId == user.UserId
+                                               && c.ProductId == item.ProductId
+                                               && c.VariantId == item.VariantId);
 
                     if (dbItem != null)
                     {
-                        // Nếu có rồi: Cộng dồn số lượng
                         dbItem.Quantity += item.Quantity;
                     }
                     else
                     {
-                        // Nếu chưa có: Tạo mới
                         var newCart = new Cart
                         {
                             UserId = user.UserId,
                             ProductId = item.ProductId,
+                            VariantId = item.VariantId,
                             Quantity = item.Quantity,
                             CreatedDate = DateTime.Now
                         };
                         _context.Carts.Add(newCart);
                     }
                 }
-
-                // Lưu thay đổi vào SQL Server
                 await _context.SaveChangesAsync();
-
-                // Xóa giỏ hàng trong Session đi (vì đã chuyển hết vào DB rồi)
                 HttpContext.Session.Remove("Cart");
             }
-            // ============================================================
+
+            // 6. Điều hướng thông minh (Nếu là Admin thì vào trang Admin luôn)
+            if (user.Role == "Admin" && returnUrl == "/")
+            {
+                return RedirectToAction("Index", "AdminUsers");
+            }
 
             return Redirect(returnUrl);
         }
 
+        // ============================================================
         // 3. ĐĂNG XUẤT
-        [Authorize]
+        // ============================================================
         public async Task<IActionResult> Logout()
         {
-            HttpContext.Session.Clear();
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            HttpContext.Session.Clear(); // Xóa sạch Session
             return RedirectToAction("Index", "Home");
         }
-        // 4. XEM LỊCH SỬ ĐƠN HÀNG
-        [Authorize] // Bắt buộc phải đăng nhập
-        public async Task<IActionResult> MyOrders()
+
+        // ============================================================
+        // 4. QUÊN MẬT KHẨU
+        // ============================================================
+        [HttpGet]
+        public IActionResult ForgotPassword() => View();
+
+        [HttpPost]
+        public async Task<IActionResult> ForgotPassword(string email)
         {
-            // Lấy UserID của người đang đăng nhập từ Cookie
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+            if (user == null)
+            {
+                ViewBag.Error = "Email không tồn tại trong hệ thống.";
+                return View();
+            }
+
+            if (user.IsLocked)
+            {
+                ViewBag.Error = "Tài khoản này đang bị khóa, không thể đặt lại mật khẩu.";
+                return View();
+            }
+
+            string otp = new Random().Next(100000, 999999).ToString();
+            HttpContext.Session.SetString("ResetEmail", email);
+            HttpContext.Session.SetString("ResetOTP", otp);
+
+            string body = $"Chào {user.FullName},<br/>Mã OTP đặt lại mật khẩu của bạn là: <b style='color:blue'>{otp}</b>";
+            await _emailService.SendEmailAsync(email, "Yêu cầu đặt lại mật khẩu", body);
+
+            TempData["SuccessMessage"] = "Đã gửi mã OTP đến email của bạn.";
+            return RedirectToAction("VerifyForgotPassword");
+        }
+
+        [HttpGet]
+        public IActionResult VerifyForgotPassword() => View();
+
+        [HttpPost]
+        public IActionResult VerifyForgotPassword(string otp)
+        {
+            var sessionOtp = HttpContext.Session.GetString("ResetOTP");
+            if (sessionOtp != null && sessionOtp == otp)
+            {
+                HttpContext.Session.SetString("IsOtpVerified", "true");
+                return RedirectToAction("ResetPassword");
+            }
+
+            ViewBag.Error = "Mã OTP không đúng hoặc đã hết hạn.";
+            return View();
+        }
+
+        [HttpGet]
+        public IActionResult ResetPassword()
+        {
+            if (HttpContext.Session.GetString("IsOtpVerified") != "true") return RedirectToAction("ForgotPassword");
+            return View();
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ResetPassword(string newPassword, string confirmPassword)
+        {
+            if (HttpContext.Session.GetString("IsOtpVerified") != "true") return RedirectToAction("ForgotPassword");
+
+            if (newPassword != confirmPassword)
+            {
+                ViewBag.Error = "Mật khẩu xác nhận không khớp.";
+                return View();
+            }
+
+            string email = HttpContext.Session.GetString("ResetEmail");
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+
+            if (user != null)
+            {
+                user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
+                await _context.SaveChangesAsync();
+
+                HttpContext.Session.Remove("ResetEmail");
+                HttpContext.Session.Remove("ResetOTP");
+                HttpContext.Session.Remove("IsOtpVerified");
+
+                TempData["SuccessMessage"] = "Đặt lại mật khẩu thành công. Vui lòng đăng nhập.";
+                return RedirectToAction("Login");
+            }
+            return View();
+        }
+
+        // ============================================================
+        // 5. ĐỔI MẬT KHẨU & PROFILE
+        // ============================================================
+        [Authorize]
+        [HttpGet]
+        public IActionResult ChangePassword() => View();
+
+        [Authorize]
+        [HttpPost]
+        public async Task<IActionResult> ChangePassword(string currentPassword, string newPassword, string confirmPassword)
+        {
             var userIdClaim = User.FindFirst("UserId");
             if (userIdClaim == null) return RedirectToAction("Login");
 
             int userId = int.Parse(userIdClaim.Value);
+            var user = await _context.Users.FindAsync(userId);
 
-            // Lấy danh sách đơn hàng của User đó
+            if (!BCrypt.Net.BCrypt.Verify(currentPassword, user.PasswordHash))
+            {
+                ViewBag.Error = "Mật khẩu hiện tại không đúng.";
+                return View();
+            }
+
+            if (newPassword != confirmPassword)
+            {
+                ViewBag.Error = "Mật khẩu mới không khớp.";
+                return View();
+            }
+
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
+            _context.Users.Update(user);
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Đổi mật khẩu thành công!";
+            return RedirectToAction("Profile");
+        }
+
+        [Authorize]
+        public async Task<IActionResult> Profile()
+        {
+            var userIdClaim = User.FindFirst("UserId");
+            if (userIdClaim == null) return RedirectToAction("Login");
+            int userId = int.Parse(userIdClaim.Value);
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null) return NotFound();
+            return View(user);
+        }
+
+        [HttpPost]
+        [Authorize]
+        public async Task<IActionResult> UpdateProfile(User model)
+        {
+            var userIdClaim = User.FindFirst("UserId");
+            int userId = int.Parse(userIdClaim.Value);
+            var user = await _context.Users.FindAsync(userId);
+
+            if (user == null) return NotFound();
+
+            user.FullName = model.FullName;
+            user.PhoneNumber = model.PhoneNumber;
+            user.Address = model.Address;
+
+            _context.Update(user);
+            await _context.SaveChangesAsync();
+            TempData["SuccessMessage"] = "Cập nhật thông tin thành công!";
+            return RedirectToAction("Profile");
+        }
+
+        // ============================================================
+        // CÁC CHỨC NĂNG ĐƠN HÀNG & VNPAY (GIỮ NGUYÊN)
+        // ============================================================
+
+        [Authorize]
+        public async Task<IActionResult> MyOrders()
+        {
+            var userIdClaim = User.FindFirst("UserId");
+            if (userIdClaim == null) return RedirectToAction("Login");
+            int userId = int.Parse(userIdClaim.Value);
+
             var orders = await _context.Orders
                 .Where(o => o.UserId == userId)
-                .OrderByDescending(o => o.OrderDate) // Mới nhất lên đầu
+                .OrderByDescending(o => o.OrderDate)
                 .ToListAsync();
 
             return View(orders);
         }
 
-        // 5. XEM CHI TIẾT ĐƠN HÀNG (Của khách)
         [Authorize]
         public async Task<IActionResult> OrderDetails(int id)
         {
@@ -154,54 +388,88 @@ namespace CosmeticStore.MVC.Controllers
             int userId = int.Parse(userIdClaim.Value);
 
             var order = await _context.Orders
-                .Include(o => o.OrderDetails)
-                .ThenInclude(od => od.Variant) // Lấy thông tin biến thể
-                .ThenInclude(v => v.Product)   // Lấy thông tin sản phẩm gốc
-                .FirstOrDefaultAsync(m => m.OrderId == id && m.UserId == userId); // Quan trọng: Phải khớp UserID để không xem trộm đơn người khác
+                .Include(o => o.OrderDetails).ThenInclude(od => od.Variant).ThenInclude(v => v.Product)
+                .FirstOrDefaultAsync(m => m.OrderId == id && m.UserId == userId);
+
+            if (order == null) return NotFound();
+            return View(order);
+        }
+
+        [Authorize]
+        [HttpPost]
+        public async Task<IActionResult> CancelOrder(int orderId)
+        {
+            var userIdClaim = User.FindFirst("UserId");
+            int userId = int.Parse(userIdClaim.Value);
+
+            var order = await _context.Orders
+                .Include(o => o.OrderDetails).ThenInclude(od => od.Variant)
+                .FirstOrDefaultAsync(o => o.OrderId == orderId && o.UserId == userId);
 
             if (order == null) return NotFound();
 
-            return View(order);
+            if (order.Status == "Pending") // COD -> Hoàn kho
+            {
+                order.Status = "Cancelled";
+                foreach (var item in order.OrderDetails)
+                {
+                    var variant = await _context.ProductVariants.FindAsync(item.VariantId);
+                    if (variant != null) variant.StockQuantity += item.Quantity;
+                }
+                await _context.SaveChangesAsync();
+                TempData["SuccessMessage"] = "Đã hủy đơn hàng COD thành công.";
+            }
+            else if (order.Status == "Pending Payment") // VNPay chưa trả -> Hủy, ko hoàn kho
+            {
+                order.Status = "Cancelled";
+                await _context.SaveChangesAsync();
+                TempData["SuccessMessage"] = "Đã hủy đơn hàng chờ thanh toán thành công.";
+            }
+            else
+            {
+                TempData["ErrorMessage"] = "Không thể hủy đơn hàng ở trạng thái này.";
+            }
+            return RedirectToAction("MyOrders");
         }
-        // 1. HIỂN THỊ THÔNG TIN CÁ NHÂN
+
         [Authorize]
-        public async Task<IActionResult> Profile()
+        public async Task<IActionResult> RepayOrder(int orderId)
         {
             var userIdClaim = User.FindFirst("UserId");
-            if (userIdClaim == null) return RedirectToAction("Login");
             int userId = int.Parse(userIdClaim.Value);
+            var order = await _context.Orders.FirstOrDefaultAsync(o => o.OrderId == orderId && o.UserId == userId);
 
-            var user = await _context.Users.FindAsync(userId);
-            if (user == null) return NotFound();
-
-            return View(user);
+            if (order == null || order.Status != "Pending Payment")
+            {
+                TempData["ErrorMessage"] = "Đơn hàng không hợp lệ để thanh toán.";
+                return RedirectToAction("MyOrders");
+            }
+            string vnpayUrl = CreateVnPayUrl(order.OrderId, order.TotalAmount);
+            return Redirect(vnpayUrl);
         }
 
-        // 2. CẬP NHẬT THÔNG TIN (POST)
-        [HttpPost]
-        [Authorize]
-        public async Task<IActionResult> UpdateProfile(User model)
+        private string CreateVnPayUrl(int orderId, decimal amount)
         {
-            var userIdClaim = User.FindFirst("UserId");
-            if (userIdClaim == null) return RedirectToAction("Login");
-            int userId = int.Parse(userIdClaim.Value);
+            string vnp_Returnurl = "https://localhost:50587/Cart/PaymentCallback";
+            string vnp_Url = _configuration["VnPay:BaseUrl"];
+            string vnp_TmnCode = _configuration["VnPay:TmnCode"];
+            string vnp_HashSecret = _configuration["VnPay:HashSecret"];
 
-            // Tìm user gốc trong DB
-            var user = await _context.Users.FindAsync(userId);
-            if (user == null) return NotFound();
+            VnPayLibrary vnpay = new VnPayLibrary();
+            vnpay.AddRequestData("vnp_Version", "2.1.0");
+            vnpay.AddRequestData("vnp_Command", "pay");
+            vnpay.AddRequestData("vnp_TmnCode", vnp_TmnCode);
+            vnpay.AddRequestData("vnp_Amount", ((long)amount * 100).ToString());
+            vnpay.AddRequestData("vnp_CreateDate", DateTime.Now.ToString("yyyyMMddHHmmss"));
+            vnpay.AddRequestData("vnp_CurrCode", "VND");
+            vnpay.AddRequestData("vnp_IpAddr", HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1");
+            vnpay.AddRequestData("vnp_Locale", "vn");
+            vnpay.AddRequestData("vnp_OrderInfo", "Thanh toan don hang:" + orderId);
+            vnpay.AddRequestData("vnp_OrderType", "other");
+            vnpay.AddRequestData("vnp_ReturnUrl", vnp_Returnurl);
+            vnpay.AddRequestData("vnp_TxnRef", orderId.ToString());
 
-            // Chỉ cập nhật các trường cho phép
-            user.FullName = model.FullName;
-            user.PhoneNumber = model.PhoneNumber;
-            user.Address = model.Address;
-
-            // Nếu muốn đổi mật khẩu thì cần logic phức tạp hơn (check pass cũ...), tạm thời bỏ qua ở đây.
-
-            _context.Update(user);
-            await _context.SaveChangesAsync();
-
-            TempData["SuccessMessage"] = "Cập nhật thông tin thành công!";
-            return RedirectToAction("Profile");
+            return vnpay.CreateRequestUrl(vnp_Url, vnp_HashSecret);
         }
     }
 }

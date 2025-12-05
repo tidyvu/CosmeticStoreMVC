@@ -1,0 +1,104 @@
+﻿@model IEnumerable<CosmeticStore.MVC.Models.Order>
+@{
+    ViewData["Title"] = ViewBag.Title;
+    Layout = "~/Views/Shared/_Layout.cshtml"; // Hoặc LayoutAdmin
+    Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
+
+    var culture = new System.Globalization.CultureInfo("vi-VN");
+}
+
+<div class="container-fluid py-4 bg-light min-vh-100">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold text-dark mb-1">@ViewBag.Title</h3>
+            <p class="text-muted small mb-0">Danh sách các đơn hàng phát sinh trong khoảng thời gian này</p>
+        </div>
+        <a href="/AdminReport/Index" class="btn btn-outline-secondary rounded-pill px-4 fw-bold">
+            <i class="bi bi-arrow-left me-2"></i> Quay lại Báo cáo
+        </a>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm rounded-4 p-3 d-flex flex-row align-items-center justify-content-between">
+                <div>
+                    <span class="text-muted text-uppercase small fw-bold">Tổng đơn hàng</span>
+                    <h3 class="fw-bold text-dark mb-0">@ViewBag.TotalCount</h3>
+                </div>
+                <div class="bg-primary bg-opacity-10 text-primary p-3 rounded-circle">
+                    <i class="bi bi-bag-check-fill fs-4"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm rounded-4 p-3 d-flex flex-row align-items-center justify-content-between">
+                <div>
+                    <span class="text-muted text-uppercase small fw-bold">Tổng doanh thu</span>
+                    <h3 class="fw-bold text-success mb-0">@(((decimal)ViewBag.TotalRevenue).ToString("#,##0", culture)) đ</h3>
+                </div>
+                <div class="bg-success bg-opacity-10 text-success p-3 rounded-circle">
+                    <i class="bi bi-currency-dollar fs-4"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light text-uppercase small fw-bold text-secondary">
+                        <tr>
+                            <th class="ps-4 py-3">Mã đơn</th>
+                            <th>Khách hàng</th>
+                            <th>Ngày đặt</th>
+                            <th>Trạng thái</th>
+                            <th class="text-end pe-4">Thành tiền</th>
+                            <th class="text-center">Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td class="ps-4 fw-bold text-primary">#@item.OrderId</td>
+                                <td>
+                                    <div class="fw-bold text-dark">@(item.CustomerName ?? item.User?.FullName ?? "Vãng lai")</div>
+                                    <small class="text-muted">@(item.CustomerEmail ?? item.User?.Email)</small>
+                                </td>
+                                <td>@item.OrderDate?.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>
+                                    @if (item.Status == "Completed")
+                                    {
+                                        <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3">Thành công</span>
+                                    }
+                                    else if (item.Status == "Pending")
+                                    {
+                                        <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-3">Chờ xử lý</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary rounded-pill px-3">@item.Status</span>
+                                    }
+                                </td>
+                                <td class="text-end fw-bold text-success pe-4">
+                                    @item.TotalAmount.ToString("#,##0", culture) đ
+                                </td>
+                                <td class="text-center">
+                                    <a asp-controller="AdminOrders" asp-action="Details" asp-route-id="@item.OrderId" class="btn btn-sm btn-light border text-primary shadow-sm" target="_blank">
+                                        <i class="bi bi-eye"></i> Xem
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                @if (!Model.Any())
+                {
+                    <div class="text-center p-5 text-muted">Không có dữ liệu.</div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,170 @@
+﻿@model CosmeticStore.MVC.Models.User
+
+@{
+    ViewData["Title"] = "Hồ sơ khách hàng";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    Layout = "~/Views/Shared/_LayoutAdmin.cshtml";// Hoặc _LayoutAdmin
+    var culture = new System.Globalization.CultureInfo("vi-VN");
+}
+
+<div class="container-fluid py-4 bg-light min-vh-100">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold text-dark mb-0">Hồ sơ khách hàng</h3>
+            <p class="text-muted small mb-0">Xem thông tin chi tiết và lịch sử hoạt động</p>
+        </div>
+        <a asp-action="Index" class="btn btn-outline-secondary rounded-pill px-4 fw-bold shadow-sm">
+            <i class="bi bi-arrow-left me-2"></i> Quay lại danh sách
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-4 mb-4">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-body text-center p-5">
+
+                    <div class="mb-3 position-relative d-inline-block">
+                        <div class="rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center fw-bold fs-1 shadow-sm"
+                             style="width: 120px; height: 120px;">
+                            @(Model.FullName?.FirstOrDefault() ?? 'U')
+                        </div>
+                        @if (Model.IsLocked)
+                        {
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-white p-2" title="Tài khoản bị khóa">
+                                <i class="bi bi-lock-fill"></i>
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-success border border-white p-2" title="Đang hoạt động">
+                                <i class="bi bi-check-lg"></i>
+                            </span>
+                        }
+                    </div>
+
+                    <h4 class="fw-bold text-dark mb-1">@Model.FullName</h4>
+                    <p class="text-muted mb-3">@Model.Role</p>
+
+                    <div class="d-grid gap-2 col-10 mx-auto">
+                        <a asp-action="Edit" asp-route-id="@Model.UserId" class="btn btn-primary rounded-pill fw-bold">
+                            <i class="bi bi-pencil-square me-2"></i> Chỉnh sửa hồ sơ
+                        </a>
+
+                        <form asp-action="ToggleLock" method="post" class="d-grid">
+                            <input type="hidden" name="id" value="@Model.UserId" />
+                            @if (Model.IsLocked)
+                            {
+                                <button type="submit" class="btn btn-outline-success rounded-pill fw-bold" onclick="return confirm('Mở khóa tài khoản này?')">
+                                    <i class="bi bi-unlock-fill me-2"></i> Mở khóa
+                                </button>
+                            }
+                            else
+                            {
+                                <button type="submit" class="btn btn-outline-danger rounded-pill fw-bold" onclick="return confirm('Bạn có chắc muốn KHÓA tài khoản này?')">
+                                    <i class="bi bi-lock-fill me-2"></i> Khóa tài khoản
+                                </button>
+                            }
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+                <div class="card-header bg-white py-3 border-bottom-0">
+                    <h6 class="fw-bold m-0 text-primary"><i class="bi bi-person-lines-fill me-2"></i>Thông tin liên hệ</h6>
+                </div>
+                <div class="card-body pt-0">
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <label class="small text-muted fw-bold text-uppercase">Email</label>
+                            <div class="fw-bold text-dark">@Model.Email</div>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="small text-muted fw-bold text-uppercase">Số điện thoại</label>
+                            <div class="fw-bold text-dark">@(Model.PhoneNumber ?? "Chưa cập nhật")</div>
+                        </div>
+                        <div class="col-12">
+                            <label class="small text-muted fw-bold text-uppercase">Địa chỉ giao hàng</label>
+                            <div class="p-3 bg-light rounded-3 text-dark">
+                                <i class="bi bi-geo-alt-fill text-danger me-2"></i> @(Model.Address ?? "Chưa cập nhật địa chỉ")
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-header bg-white py-3 border-bottom-0 d-flex justify-content-between align-items-center">
+                    <h6 class="fw-bold m-0 text-primary"><i class="bi bi-clock-history me-2"></i>Lịch sử đơn hàng gần đây</h6>
+                    <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill">Tổng: @(Model.Orders?.Count ?? 0) đơn</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="bg-light text-secondary small text-uppercase">
+                                <tr>
+                                    <th class="ps-4">Mã ĐH</th>
+                                    <th>Ngày đặt</th>
+                                    <th class="text-center">Trạng thái</th>
+                                    <th class="text-end pe-4">Tổng tiền</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (Model.Orders != null && Model.Orders.Any())
+                                {
+                                    @foreach (var order in Model.Orders.OrderByDescending(o => o.OrderDate).Take(5))
+                                    {
+                                        <tr>
+                                            <td class="ps-4 fw-bold text-primary">
+                                                <a asp-controller="AdminOrders" asp-action="Details" asp-route-id="@order.OrderId" class="text-decoration-none">
+                                                    #@order.OrderId
+                                                </a>
+                                            </td>
+                                            <td>@order.OrderDate?.ToString("dd/MM/yyyy HH:mm")</td>
+                                            <td class="text-center">
+                                                @if (order.Status == "Completed")
+                                                {
+                                                    <span class="badge bg-success bg-opacity-10 text-success">Thành công</span>
+                                                }
+                                                else if (order.Status == "Cancelled")
+                                                {
+                                                    <span class="badge bg-danger bg-opacity-10 text-danger">Đã hủy</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-warning bg-opacity-10 text-warning">@order.Status</span>
+                                                }
+                                            </td>
+                                            <td class="text-end fw-bold text-dark pe-4">
+                                                @order.TotalAmount.ToString("#,##0", culture) đ
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="4" class="text-center py-4 text-muted">
+                                            User này chưa có đơn hàng nào.
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    @if (Model.Orders != null && Model.Orders.Count > 5)
+                    {
+                        <div class="text-center py-3 border-top">
+                            <a asp-controller="AdminOrders" asp-action="Index" class="text-decoration-none fw-bold small">Xem tất cả đơn hàng <i class="bi bi-arrow-right"></i></a>
+                        </div>
+                    }
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>

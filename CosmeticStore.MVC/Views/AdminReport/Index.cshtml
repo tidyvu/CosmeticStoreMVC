@@ -1,0 +1,195 @@
+﻿@{
+    ViewData["Title"] = "Dashboard Báo cáo";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
+
+}
+
+<div class="container-fluid py-4 bg-light min-vh-100">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+        <div>
+            <h3 class="fw-bold text-dark mb-0">Báo cáo Doanh thu</h3>
+            <p class="text-muted small mb-0">Theo dõi hiệu quả kinh doanh theo thời gian thực</p>
+        </div>
+        <div class="card border-0 shadow-sm rounded-pill p-1 bg-white">
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-sm btn-white rounded-pill px-3 fw-bold active-filter" onclick="loadChart('daily', this)">30 Ngày</button>
+                <button type="button" class="btn btn-sm btn-white rounded-pill px-3 fw-bold" onclick="loadChart('monthly', this)">Theo Tháng</button>
+                <button type="button" class="btn btn-sm btn-white rounded-pill px-3 fw-bold" onclick="loadChart('yearly', this)">Theo Năm</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-xl-6 col-md-6 mb-3 mb-xl-0">
+            <div class="card border-0 shadow-sm h-100 rounded-4 overflow-hidden">
+                <div class="card-body p-4">
+                    <p class="text-uppercase fw-bold text-success small mb-1">Tổng Doanh thu</p>
+                    <h2 class="fw-bold text-dark mb-0" id="summaryRevenue">0 đ</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-6 col-md-6">
+            <div class="card border-0 shadow-sm h-100 rounded-4 overflow-hidden">
+                <div class="card-body p-4">
+                    <p class="text-uppercase fw-bold text-primary small mb-1">Tổng Đơn hàng</p>
+                    <h2 class="fw-bold text-dark mb-0" id="summaryCount">0</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-body">
+            <div class="chart-container" style="position: relative; height: 350px;">
+                <canvas id="revenueChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light text-uppercase small text-muted fw-bold">
+                        <tr>
+                            <th class="ps-4 py-3">Thời gian</th>
+                            <th class="text-center">Số lượng</th>
+                            <th class="text-end">Doanh thu</th>
+                            <th class="text-center pe-4">Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .btn-white {
+        background: transparent;
+        border: none;
+        color: #6c757d;
+    }
+
+        .btn-white:hover {
+            color: #0d6efd;
+            background-color: #f8f9fa;
+        }
+
+    .active-filter {
+        background-color: #0d6efd !important;
+        color: white !important;
+        box-shadow: 0 2px 5px rgba(13, 110, 253, 0.3);
+    }
+
+    tr.cursor-pointer {
+        cursor: pointer;
+        transition: background-color 0.1s;
+    }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    let myChart = null;
+    let currentType = 'daily';
+    const formatCurrency = (amount) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+
+    function loadChart(type, btnElement) {
+        currentType = type;
+        if(btnElement) {
+            document.querySelectorAll('.btn-group .btn').forEach(btn => btn.classList.remove('active-filter'));
+            btnElement.classList.add('active-filter');
+        }
+
+        let url = '';
+        if (type === 'daily') url = '/AdminReport/GetDailyRevenue';
+        else if (type === 'monthly') url = '/AdminReport/GetMonthlyRevenue';
+        else if (type === 'yearly') url = '/AdminReport/GetYearlyRevenue';
+
+        fetch(url)
+            .then(res => res.json())
+            .then(data => {
+                renderChart(data);
+                renderTableAndSummary(data);
+            });
+    }
+
+    // --- 1. [SỬA ĐỔI] Hàm điều hướng sang trang mới ---
+    function navigateToDetails(timeValue) {
+        // Chuyển hướng trình duyệt sang trang chi tiết
+        // encodeURIComponent để đảm bảo chuỗi ngày tháng (vd: 20/10/2023) không bị lỗi URL
+        window.location.href = `/AdminReport/PeriodDetails?type=${currentType}&timeValue=${encodeURIComponent(timeValue)}`;
+    }
+
+    function renderChart(data) {
+        const ctx = document.getElementById('revenueChart').getContext('2d');
+        const labels = data.map(item => item.date || item.label);
+        const revenues = data.map(item => item.revenue);
+
+        let gradient = ctx.createLinearGradient(0, 0, 0, 400);
+        gradient.addColorStop(0, 'rgba(13, 110, 253, 0.8)');
+        gradient.addColorStop(1, 'rgba(13, 110, 253, 0.1)');
+
+        if (myChart) myChart.destroy();
+
+        myChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Doanh thu',
+                    data: revenues,
+                    backgroundColor: gradient,
+                    borderColor: '#0d6efd',
+                    borderWidth: 1,
+                    borderRadius: 5,
+                    barPercentage: 0.6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                onClick: (e) => {
+                    const points = myChart.getElementsAtEventForMode(e, 'nearest', { intersect: true }, true);
+                    if (points.length) {
+                        const index = points[0].index;
+                        const label = myChart.data.labels[index];
+                        // --- GỌI HÀM ĐIỀU HƯỚNG ---
+                        navigateToDetails(label);
+                    }
+                },
+                scales: {
+                    y: { beginAtZero: true, ticks: { callback: (val) => formatCurrency(val) } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+    }
+
+    function renderTableAndSummary(data) {
+        const tableBody = document.getElementById('tableBody');
+        document.getElementById('summaryRevenue').innerText = formatCurrency(data.reduce((sum, item) => sum + item.revenue, 0));
+        document.getElementById('summaryCount').innerText = data.reduce((sum, item) => sum + item.count, 0);
+
+        tableBody.innerHTML = '';
+        data.forEach(item => {
+            const label = item.date || item.label;
+            const row = `
+                <tr class="cursor-pointer" onclick="navigateToDetails('${label}')" title="Nhấn để xem chi tiết">
+                    <td class="ps-4 fw-bold text-dark">${label}</td>
+                    <td class="text-center"><span class="badge bg-secondary bg-opacity-10 text-secondary rounded-pill px-3">${item.count}</span></td>
+                    <td class="text-end fw-bold text-success">${formatCurrency(item.revenue)}</td>
+                    <td class="text-center pe-4"><button class="btn btn-sm btn-light border text-primary"><i class="bi bi-arrow-right"></i></button></td>
+                </tr>
+            `;
+            tableBody.innerHTML += row;
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        loadChart('daily', null);
+    });
+</script>
