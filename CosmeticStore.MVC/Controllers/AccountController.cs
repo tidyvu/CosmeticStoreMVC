@@ -29,17 +29,21 @@ namespace CosmeticStore.MVC.Controllers
         // 1. ĐĂNG KÝ
         // ============================================================
         public IActionResult Register() => View();
+        public IActionResult AccessDenied()
+        {
+            return View();
+        }
 
         [HttpPost]
         public async Task<IActionResult> Register(User user)
         {
+            // Kiểm tra Email đã tồn tại chưa
             if (await _context.Users.AnyAsync(u => u.Email == user.Email))
             {
                 ModelState.AddModelError("Email", "Email này đã được sử dụng.");
                 return View(user);
             }
-            // Lưu ý: Nên dùng BCrypt để mã hóa mật khẩu thực tế
-            //user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(user.PasswordHash);
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(user.PasswordHash);
             user.Role = "Customer";
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
@@ -52,37 +56,74 @@ namespace CosmeticStore.MVC.Controllers
         // ============================================================
         public IActionResult Login(string returnUrl = "/")
         {
-            ViewData["ReturnUrl"] = returnUrl;
+            ViewData["ReturnUrl"] = returnUrl; // Lưu lại trang khách muốn vào để chuyển hướng sau khi login xong
             return View();
         }
 
         [HttpPost]
         public async Task<IActionResult> Login(string email, string password, string returnUrl = "/")
         {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email && u.PasswordHash == password);
-            // Lưu ý: Nếu dùng BCrypt thì check: BCrypt.Net.BCrypt.Verify(password, user.PasswordHash)
+            // Tìm user trong DB
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
 
-            if (user == null)
+            if (user == null || !BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
             {
                 ViewBag.Error = "Email hoặc mật khẩu không đúng.";
                 return View();
             }
 
+            // 2. Tạo Claims để đăng nhập
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.Name, user.FullName ?? user.Email),
                 new Claim(ClaimTypes.Email, user.Email),
                 new Claim("UserId", user.UserId.ToString()),
-                new Claim(ClaimTypes.Role, user.Role ?? "Customer")
+                new Claim(ClaimTypes.Role, user.Role)
             };
 
             var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-            await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(claimsIdentity));
+            var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
 
-            // Merge giỏ hàng Session vào DB nếu có
-            // ... (Logic merge giỏ hàng giữ nguyên như cũ) ...
+            await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, claimsPrincipal);
+            var sessionCart = HttpContext.Session.Get<List<CartItem>>("Cart");
+            if (sessionCart != null && sessionCart.Count > 0)
+            {
+                foreach (var item in sessionCart)
+                {
+                    // Tìm xem món này (đúng ProductID VÀ VariantID) đã có trong DB chưa
+                    var dbItem = await _context.Carts
+                        .FirstOrDefaultAsync(c => c.UserId == user.UserId
+                                               && c.ProductId == item.ProductId
+                                               && c.VariantId == item.VariantId); // <--- Quan trọng: Phải khớp VariantId
 
-            return LocalRedirect(returnUrl);
+                    if (dbItem != null)
+                    {
+                        // Nếu có rồi: Cộng dồn số lượng
+                        dbItem.Quantity += item.Quantity;
+                    }
+                    else
+                    {
+                        // Nếu chưa có: Tạo mới với đầy đủ thông tin
+                        var newCart = new Cart
+                        {
+                            UserId = user.UserId,
+                            ProductId = item.ProductId,
+                            VariantId = item.VariantId, // <--- Đừng quên dòng này
+                            Quantity = item.Quantity,
+                            CreatedDate = DateTime.Now
+                        };
+                        _context.Carts.Add(newCart);
+                    }
+                }
+
+                // Lưu thay đổi vào SQL Server
+                await _context.SaveChangesAsync();
+
+                // Xóa giỏ hàng trong Session đi (vì đã chuyển hết vào DB rồi)
+                HttpContext.Session.Remove("Cart");
+            }
+
+            return Redirect(returnUrl);
         }
 
         // ============================================================
@@ -91,6 +132,7 @@ namespace CosmeticStore.MVC.Controllers
         public async Task<IActionResult> Logout()
         {
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            HttpContext.Session.Clear();
             return RedirectToAction("Index", "Home");
         }
 
@@ -116,18 +158,24 @@ namespace CosmeticStore.MVC.Controllers
         // 5. CHI TIẾT ĐƠN HÀNG
         // ============================================================
         [Authorize]
+        [Authorize]
         public async Task<IActionResult> OrderDetails(int id)
         {
             var userIdClaim = User.FindFirst("UserId");
+            if (userIdClaim == null) return RedirectToAction("Login");
             int userId = int.Parse(userIdClaim.Value);
 
             var order = await _context.Orders
-                .Include(o => o.OrderDetails).ThenInclude(od => od.Variant).ThenInclude(v => v.Product)
-                .FirstOrDefaultAsync(o => o.OrderId == id && o.UserId == userId);
+                .Include(o => o.OrderDetails)
+                .ThenInclude(od => od.Variant) // Lấy thông tin biến thể
+                .ThenInclude(v => v.Product)   // Lấy thông tin sản phẩm gốc
+                .FirstOrDefaultAsync(m => m.OrderId == id && m.UserId == userId); // Quan trọng: Phải khớp UserID để không xem trộm đơn người khác
 
             if (order == null) return NotFound();
+
             return View(order);
         }
+
 
         // ============================================================
         // 6. HỦY ĐƠN HÀNG (Xử lý cả COD và VNPay)
@@ -205,25 +253,40 @@ namespace CosmeticStore.MVC.Controllers
         [Authorize]
         public async Task<IActionResult> Profile()
         {
-            var userId = int.Parse(User.FindFirst("UserId").Value);
+            var userIdClaim = User.FindFirst("UserId");
+            if (userIdClaim == null) return RedirectToAction("Login");
+            int userId = int.Parse(userIdClaim.Value);
+
             var user = await _context.Users.FindAsync(userId);
+            if (user == null) return NotFound();
+
             return View(user);
         }
+
 
         [HttpPost]
         [Authorize]
         public async Task<IActionResult> UpdateProfile(User model)
         {
-            var userId = int.Parse(User.FindFirst("UserId").Value);
+            var userIdClaim = User.FindFirst("UserId");
+            if (userIdClaim == null) return RedirectToAction("Login");
+            int userId = int.Parse(userIdClaim.Value);
+
+            // Tìm user gốc trong DB
             var user = await _context.Users.FindAsync(userId);
-            if (user != null)
-            {
-                user.FullName = model.FullName;
-                user.PhoneNumber = model.PhoneNumber;
-                user.Address = model.Address;
-                await _context.SaveChangesAsync();
-                TempData["SuccessMessage"] = "Cập nhật thành công!";
-            }
+            if (user == null) return NotFound();
+
+            // Chỉ cập nhật các trường cho phép
+            user.FullName = model.FullName;
+            user.PhoneNumber = model.PhoneNumber;
+            user.Address = model.Address;
+
+            // Nếu muốn đổi mật khẩu thì cần logic phức tạp hơn (check pass cũ...), tạm thời bỏ qua ở đây.
+
+            _context.Update(user);
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Cập nhật thông tin thành công!";
             return RedirectToAction("Profile");
         }
 
