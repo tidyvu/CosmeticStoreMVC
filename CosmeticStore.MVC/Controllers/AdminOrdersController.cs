@@ -1,7 +1,8 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using ClosedXML.Excel;
+using CosmeticStore.MVC.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using CosmeticStore.MVC.Models;
 using System.Linq; // Cần thiết cho các thao tác LINQ như Where, Select, Distinct
 
 namespace CosmeticStore.MVC.Controllers
@@ -70,7 +71,7 @@ namespace CosmeticStore.MVC.Controllers
                 .Include(o => o.User)
                 .Include(o => o.OrderDetails)
                 .ThenInclude(od => od.Variant)
-                .ThenInclude(v => v.Product)
+.ThenInclude(v => v.Product)
                 .FirstOrDefaultAsync(m => m.OrderId == id);
 
             if (order == null) return NotFound();
@@ -152,6 +153,129 @@ namespace CosmeticStore.MVC.Controllers
             }
 
             return RedirectToAction(nameof(Details), new { id = id });
+        }
+
+        // ... (Các hàm khác)
+
+        /// <summary>
+        /// Trang in hóa đơn đóng gói (Không có Layout Admin)
+        /// </summary>
+        public async Task<IActionResult> PrintInvoice(int id)
+        {
+            var order = await _context.Orders
+                .Include(o => o.OrderDetails)
+                    .ThenInclude(od => od.Variant)
+                        .ThenInclude(v => v.Product)
+                .FirstOrDefaultAsync(m => m.OrderId == id);
+
+            if (order == null) return NotFound();
+
+            return View(order);
+        }
+        /// <summary>
+        /// Xuất chi tiết đơn hàng ra file Excel (.xlsx)
+        /// </summary>
+        /// <param name="id">Mã đơn hàng</param>
+        public async Task<IActionResult> ExportOrderToExcel(int id)
+        {
+            // 1. Lấy dữ liệu đơn hàng (Giống hệt hàm Details)
+            var order = await _context.Orders
+                .Include(o => o.User)
+                .Include(o => o.OrderDetails)
+                .ThenInclude(od => od.Variant)
+                .ThenInclude(v => v.Product)
+                .FirstOrDefaultAsync(m => m.OrderId == id);
+
+            if (order == null) return NotFound();
+
+            // 2. Khởi tạo Workbook (File Excel)
+            using (var workbook = new XLWorkbook())
+            {
+                var worksheet = workbook.Worksheets.Add("ChiTietDonHang");
+
+                // --- PHẦN 1: THÔNG TIN CHUNG ---
+                // Tiêu đề
+                worksheet.Cell(1, 1).Value = "CHI TIẾT ĐƠN HÀNG";
+                worksheet.Range(1, 1, 1, 6).Merge().Style.Font.SetBold().Font.SetFontSize(16).Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+
+                // Thông tin khách hàng & Đơn hàng
+                worksheet.Cell(3, 1).Value = "Mã đơn hàng:";
+                worksheet.Cell(3, 2).Value = "#" + order.OrderId;
+
+                worksheet.Cell(4, 1).Value = "Ngày đặt:";
+                worksheet.Cell(4, 2).Value = order.OrderDate; // Excel tự format ngày
+                worksheet.Cell(5, 1).Value = "Khách hàng:";
+                worksheet.Cell(5, 2).Value = order.CustomerName ?? "Khách vãng lai";
+
+                worksheet.Cell(6, 1).Value = "Số điện thoại:";
+                worksheet.Cell(6, 2).Value = "'" + order.CustomerPhone; // Thêm dấu ' để giữ số 0 đầu
+
+                worksheet.Cell(7, 1).Value = "Địa chỉ:";
+                worksheet.Cell(7, 2).Value = order.ShippingAddress;
+
+                worksheet.Cell(8, 1).Value = "Trạng thái:";
+                worksheet.Cell(8, 2).Value = order.Status;
+
+                // --- PHẦN 2: BẢNG SẢN PHẨM ---
+                int row = 10; // Bắt đầu từ dòng 10
+
+                // Header bảng
+                worksheet.Cell(row, 1).Value = "STT";
+                worksheet.Cell(row, 2).Value = "Tên sản phẩm";
+                worksheet.Cell(row, 3).Value = "Phân loại";
+                worksheet.Cell(row, 4).Value = "Số lượng";
+                worksheet.Cell(row, 5).Value = "Đơn giá";
+                worksheet.Cell(row, 6).Value = "Thành tiền";
+
+                // Style Header bảng
+                var headerRange = worksheet.Range(row, 1, row, 6);
+                headerRange.Style.Font.SetBold();
+                headerRange.Style.Fill.SetBackgroundColor(XLColor.LightGray);
+                headerRange.Style.Border.SetOutsideBorder(XLBorderStyleValues.Thin);
+
+                // Dữ liệu bảng
+                row++;
+                int stt = 1;
+                decimal totalAmount = 0;
+
+                foreach (var item in order.OrderDetails)
+                {
+                    worksheet.Cell(row, 1).Value = stt++;
+                    worksheet.Cell(row, 2).Value = item.Variant?.Product?.ProductName ?? "Sản phẩm đã xóa";
+                    worksheet.Cell(row, 3).Value = item.Variant?.VariantName ?? "-";
+                    worksheet.Cell(row, 4).Value = item.Quantity;
+                    worksheet.Cell(row, 5).Value = item.UnitPrice;
+                    worksheet.Cell(row, 6).Value = item.Quantity * item.UnitPrice;
+
+                    // Định dạng tiền tệ (Ví dụ: 100,000)
+                    worksheet.Cell(row, 5).Style.NumberFormat.Format = "#,##0";
+                    worksheet.Cell(row, 6).Style.NumberFormat.Format = "#,##0";
+
+                    totalAmount += (item.Quantity * item.UnitPrice);
+                    row++;
+                }
+
+                // --- PHẦN 3: TỔNG KẾT ---
+                worksheet.Cell(row, 5).Value = "TỔNG CỘNG:";
+                worksheet.Cell(row, 5).Style.Font.SetBold();
+
+                worksheet.Cell(row, 6).Value = totalAmount; // Hoặc order.TotalAmount nếu bạn lưu sẵn
+                worksheet.Cell(row, 6).Style.Font.SetBold().Font.SetFontColor(XLColor.Red);
+                worksheet.Cell(row, 6).Style.NumberFormat.Format = "#,##0";
+
+                // Tự động căn chỉnh độ rộng cột
+                worksheet.Columns().AdjustToContents();
+
+                // 3. Xuất file ra stream
+                using (var stream = new MemoryStream())
+                {
+                    workbook.SaveAs(stream);
+                    var content = stream.ToArray();
+                    string fileName = $"DonHang_{order.OrderId}_{DateTime.Now:yyyyMMdd}.xlsx";
+
+                    return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+                }
+            }
         }
     }
 }

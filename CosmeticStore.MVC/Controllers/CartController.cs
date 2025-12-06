@@ -1,13 +1,16 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using CosmeticStore.MVC.Models;
+﻿using ClosedXML.Excel;      // Cần cho xuất Excel
 using CosmeticStore.MVC.Helpers; // Chứa VnPayLibrary & SessionHelper
-using Microsoft.EntityFrameworkCore;
+using CosmeticStore.MVC.Models;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using System;
 using System.Collections.Generic;
+using System.Drawing;
+using System.IO;            // Cần cho MemoryStream
 using System.Linq;
 using System.Threading.Tasks;
-using System;
 
 namespace CosmeticStore.MVC.Controllers
 {
@@ -28,15 +31,12 @@ namespace CosmeticStore.MVC.Controllers
         public async Task<IActionResult> Index()
         {
             var cartItems = new List<CartItem>();
-
             if (User.Identity.IsAuthenticated)
             {
                 int userId = GetUserId();
                 var dbCarts = await _context.Carts
-                    .Include(c => c.Product)
-                    .Include(c => c.ProductVariant)
-                    .Where(c => c.UserId == userId)
-                    .ToListAsync();
+                    .Include(c => c.Product).Include(c => c.ProductVariant)
+                    .Where(c => c.UserId == userId).ToListAsync();
 
                 foreach (var c in dbCarts)
                 {
@@ -59,7 +59,6 @@ namespace CosmeticStore.MVC.Controllers
             {
                 cartItems = HttpContext.Session.Get<List<CartItem>>("Cart") ?? new List<CartItem>();
             }
-
             return View(cartItems);
         }
 
@@ -69,13 +68,10 @@ namespace CosmeticStore.MVC.Controllers
         public async Task<IActionResult> AddToCart(int productId, int variantId, int quantity = 1)
         {
             if (quantity <= 0) quantity = 1;
-
             var variant = await _context.ProductVariants.FindAsync(variantId);
             if (variant == null) return NotFound();
 
-            // SỬA LỖI: Đã bỏ "?? 0" vì StockQuantity là int
             int currentStock = variant.StockQuantity;
-
             if (currentStock < quantity)
             {
                 TempData["ErrorMessage"] = $"Sản phẩm này chỉ còn {currentStock} món.";
@@ -86,31 +82,16 @@ namespace CosmeticStore.MVC.Controllers
             if (User.Identity.IsAuthenticated)
             {
                 int userId = GetUserId();
-                var dbItem = await _context.Carts
-                    .FirstOrDefaultAsync(c => c.UserId == userId && c.ProductId == productId && c.VariantId == variantId);
+                var dbItem = await _context.Carts.FirstOrDefaultAsync(c => c.UserId == userId && c.ProductId == productId && c.VariantId == variantId);
 
                 if (dbItem != null)
                 {
-                    if (currentStock < (dbItem.Quantity + quantity))
-                    {
-                        TempData["ErrorMessage"] = $"Kho không đủ. Bạn đã có {dbItem.Quantity} trong giỏ.";
-                    }
-                    else
-                    {
-                        dbItem.Quantity += quantity;
-                    }
+                    if (currentStock < (dbItem.Quantity + quantity)) TempData["ErrorMessage"] = $"Kho không đủ. Bạn đã có {dbItem.Quantity} trong giỏ.";
+                    else dbItem.Quantity += quantity;
                 }
                 else
                 {
-                    var newCart = new Cart
-                    {
-                        UserId = userId,
-                        ProductId = productId,
-                        VariantId = variantId,
-                        Quantity = quantity,
-                        CreatedDate = DateTime.Now
-                    };
-                    _context.Carts.Add(newCart);
+                    _context.Carts.Add(new Cart { UserId = userId, ProductId = productId, VariantId = variantId, Quantity = quantity, CreatedDate = DateTime.Now });
                 }
                 await _context.SaveChangesAsync();
             }
@@ -118,38 +99,20 @@ namespace CosmeticStore.MVC.Controllers
             {
                 var cart = HttpContext.Session.Get<List<CartItem>>("Cart") ?? new List<CartItem>();
                 var existingItem = cart.FirstOrDefault(x => x.ProductId == productId && x.VariantId == variantId);
-
                 if (existingItem != null)
                 {
-                    if (currentStock < (existingItem.Quantity + quantity))
-                    {
-                        TempData["ErrorMessage"] = $"Kho không đủ hàng.";
-                    }
-                    else
-                    {
-                        existingItem.Quantity += quantity;
-                    }
+                    if (currentStock < (existingItem.Quantity + quantity)) TempData["ErrorMessage"] = "Kho không đủ hàng.";
+                    else existingItem.Quantity += quantity;
                 }
                 else
                 {
                     var product = await _context.Products.FindAsync(productId);
-                    cart.Add(new CartItem
-                    {
-                        ProductId = variant.ProductId,
-                        VariantId = variant.VariantId,
-                        ProductName = product?.ProductName,
-                        VariantName = variant.VariantName,
-                        ImageUrl = product?.MainImageUrl,
-                        Price = GetEffectivePrice(variant),
-                        Quantity = quantity
-                    });
+                    cart.Add(new CartItem { ProductId = variant.ProductId, VariantId = variant.VariantId, ProductName = product?.ProductName, VariantName = variant.VariantName, ImageUrl = product?.MainImageUrl, Price = GetEffectivePrice(variant), Quantity = quantity });
                 }
                 HttpContext.Session.Set("Cart", cart);
             }
 
-            if (TempData["ErrorMessage"] == null)
-                TempData["SuccessMessage"] = "Đã thêm vào giỏ hàng!";
-
+            if (TempData["ErrorMessage"] == null) TempData["SuccessMessage"] = "Đã thêm vào giỏ hàng!";
             string urlReferer = Request.Headers["Referer"].ToString();
             return !string.IsNullOrEmpty(urlReferer) ? Redirect(urlReferer) : RedirectToAction("Index");
         }
@@ -161,17 +124,10 @@ namespace CosmeticStore.MVC.Controllers
         public async Task<IActionResult> UpdateQuantity(int productId, int variantId, int quantity)
         {
             if (quantity <= 0) return await Remove(productId, variantId);
-
             var variant = await _context.ProductVariants.FindAsync(variantId);
-            if (variant == null) return Json(new { success = false, message = "Sản phẩm không tồn tại." });
-
-            // SỬA LỖI: Đã bỏ "?? 0"
+            if (variant == null) return Json(new { success = false, message = "SP không tồn tại." });
             int currentStock = variant.StockQuantity;
-
-            if (currentStock < quantity)
-            {
-                return Json(new { success = false, message = $"Kho chỉ còn {currentStock} sản phẩm.", newQuantity = currentStock });
-            }
+            if (currentStock < quantity) return Json(new { success = false, message = $"Kho chỉ còn {currentStock}.", newQuantity = currentStock });
 
             decimal grandTotal = 0;
             decimal itemTotalPrice = 0;
@@ -180,20 +136,13 @@ namespace CosmeticStore.MVC.Controllers
             {
                 int userId = GetUserId();
                 var dbItem = await _context.Carts.FirstOrDefaultAsync(c => c.UserId == userId && c.ProductId == productId && c.VariantId == variantId);
-
                 if (dbItem != null)
                 {
                     dbItem.Quantity = quantity;
                     await _context.SaveChangesAsync();
-
                     var currentCart = await _context.Carts.Include(c => c.ProductVariant).Where(c => c.UserId == userId).ToListAsync();
                     grandTotal = currentCart.Sum(c => c.Quantity * GetEffectivePrice(c.ProductVariant));
-
-                    var currentItem = currentCart.FirstOrDefault(c => c.ProductId == productId && c.VariantId == variantId);
-                    if (currentItem != null)
-                    {
-                        itemTotalPrice = currentItem.Quantity * GetEffectivePrice(currentItem.ProductVariant);
-                    }
+                    itemTotalPrice = dbItem.Quantity * GetEffectivePrice(dbItem.ProductVariant);
                 }
             }
             else
@@ -208,18 +157,11 @@ namespace CosmeticStore.MVC.Controllers
                     itemTotalPrice = item.TotalPrice;
                 }
             }
-
-            return Json(new
-            {
-                success = true,
-                grandTotal = grandTotal,
-                newTotalPrice = itemTotalPrice,
-                newQuantity = quantity
-            });
+            return Json(new { success = true, grandTotal, newTotalPrice = itemTotalPrice, newQuantity = quantity });
         }
 
         // ==========================================================
-        // 4. XÓA SẢN PHẨM (AJAX)
+        // 4. XÓA SẢN PHẨM
         // ==========================================================
         public async Task<IActionResult> Remove(int productId, int variantId)
         {
@@ -227,19 +169,15 @@ namespace CosmeticStore.MVC.Controllers
             {
                 decimal grandTotal = 0;
                 int itemCount = 0;
-
                 if (User.Identity.IsAuthenticated)
                 {
                     int userId = GetUserId();
-                    if (userId == 0) return RedirectToAction("Login", "Account");
-
                     var dbItem = await _context.Carts.FirstOrDefaultAsync(c => c.UserId == userId && c.ProductId == productId && c.VariantId == variantId);
                     if (dbItem != null)
                     {
                         _context.Carts.Remove(dbItem);
                         await _context.SaveChangesAsync();
                     }
-
                     var currentCart = await _context.Carts.Include(c => c.ProductVariant).Where(c => c.UserId == userId).ToListAsync();
                     grandTotal = currentCart.Sum(c => c.Quantity * GetEffectivePrice(c.ProductVariant));
                     itemCount = currentCart.Count;
@@ -255,18 +193,10 @@ namespace CosmeticStore.MVC.Controllers
                         itemCount = cart.Count;
                     }
                 }
-
-                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
-                {
-                    return Json(new { success = true, grandTotal = grandTotal, itemCount = itemCount });
-                }
-
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest") return Json(new { success = true, grandTotal, itemCount });
                 return RedirectToAction("Index");
             }
-            catch
-            {
-                return RedirectToAction("Index");
-            }
+            catch { return RedirectToAction("Index"); }
         }
 
         // ==========================================================
@@ -277,39 +207,19 @@ namespace CosmeticStore.MVC.Controllers
         public async Task<IActionResult> Checkout()
         {
             int userId = GetUserId();
-            if (userId == 0) return RedirectToAction("Login", "Account");
-
-            var dbCarts = await _context.Carts
-                .Include(c => c.Product)
-                .Include(c => c.ProductVariant)
-                .Where(c => c.UserId == userId)
-                .ToListAsync();
-
+            var dbCarts = await _context.Carts.Include(c => c.Product).Include(c => c.ProductVariant).Where(c => c.UserId == userId).ToListAsync();
             if (dbCarts.Count == 0)
             {
                 TempData["ErrorMessage"] = "Giỏ hàng trống.";
                 return RedirectToAction("Index");
             }
-
-            var cartItems = dbCarts.Select(c => new CartItem
-            {
-                ProductId = c.ProductId,
-                VariantId = c.VariantId,
-                ProductName = c.Product?.ProductName,
-                VariantName = c.ProductVariant?.VariantName,
-                ImageUrl = c.Product?.MainImageUrl,
-                Price = GetEffectivePrice(c.ProductVariant),
-                Quantity = c.Quantity
-            }).ToList();
-
-            var user = await _context.Users.FindAsync(userId);
-            ViewBag.User = user;
-
+            var cartItems = dbCarts.Select(c => new CartItem { ProductId = c.ProductId, VariantId = c.VariantId, ProductName = c.Product?.ProductName, VariantName = c.ProductVariant?.VariantName, ImageUrl = c.Product?.MainImageUrl, Price = GetEffectivePrice(c.ProductVariant), Quantity = c.Quantity }).ToList();
+            ViewBag.User = await _context.Users.FindAsync(userId);
             return View(cartItems);
         }
 
         // ==========================================================
-        // 6. XỬ LÝ ĐẶT HÀNG (POST) - CHUẨN LOGIC VNPAY
+        // 6. XỬ LÝ ĐẶT HÀNG (POST)
         // ==========================================================
         [Authorize]
         [HttpPost]
@@ -317,27 +227,20 @@ namespace CosmeticStore.MVC.Controllers
         {
             if (string.IsNullOrEmpty(customerName) || string.IsNullOrEmpty(phone) || string.IsNullOrEmpty(address))
             {
-                TempData["ErrorMessage"] = "Vui lòng nhập đầy đủ thông tin giao hàng.";
+                TempData["ErrorMessage"] = "Thiếu thông tin giao hàng.";
                 return RedirectToAction("Checkout");
             }
 
             int userId = GetUserId();
-            if (userId == 0) return RedirectToAction("Login", "Account");
-
             using (var transaction = _context.Database.BeginTransaction())
             {
                 try
                 {
-                    var dbCarts = await _context.Carts
-                        .Include(c => c.ProductVariant)
-                        .Where(c => c.UserId == userId)
-                        .ToListAsync();
-
+                    var dbCarts = await _context.Carts.Include(c => c.ProductVariant).Where(c => c.UserId == userId).ToListAsync();
                     if (dbCarts.Count == 0) return RedirectToAction("Index");
 
                     decimal totalAmount = dbCarts.Sum(c => c.Quantity * GetEffectivePrice(c.ProductVariant));
 
-                    // 1. Tạo đơn hàng
                     var order = new Order
                     {
                         UserId = userId,
@@ -348,180 +251,163 @@ namespace CosmeticStore.MVC.Controllers
                         TotalAmount = totalAmount,
                         Status = paymentMethod == "VNPay" ? "Pending Payment" : "Pending"
                     };
-
                     _context.Orders.Add(order);
                     await _context.SaveChangesAsync();
 
-                    // 2. Tạo chi tiết đơn
                     foreach (var item in dbCarts)
                     {
                         var variant = await _context.ProductVariants.FindAsync(item.VariantId);
+                        if (variant == null) throw new Exception("Lỗi sản phẩm.");
+                        if (variant.StockQuantity < item.Quantity) throw new Exception($"'{variant.VariantName}' hết hàng.");
 
-                        // Kiểm tra kho cơ bản
-                        if (variant == null) throw new Exception("Sản phẩm không tồn tại.");
+                        if (paymentMethod == "COD") variant.StockQuantity -= item.Quantity;
 
-                        // SỬA LỖI: Bỏ "?? 0"
-                        int currentStock = variant.StockQuantity;
-
-                        if (currentStock < item.Quantity)
-                        {
-                            throw new Exception($"Sản phẩm '{variant.VariantName}' hiện không đủ hàng.");
-                        }
-
-                        // QUAN TRỌNG: Chỉ trừ kho nếu là COD
-                        if (paymentMethod == "COD")
-                        {
-                            variant.StockQuantity = currentStock - item.Quantity;
-                        }
-
-                        var orderDetail = new OrderDetail
-                        {
-                            OrderId = order.OrderId,
-                            VariantId = item.VariantId,
-                            Quantity = item.Quantity,
-                            UnitPrice = GetEffectivePrice(item.ProductVariant)
-                        };
-                        _context.OrderDetails.Add(orderDetail);
+                        _context.OrderDetails.Add(new OrderDetail { OrderId = order.OrderId, VariantId = item.VariantId, Quantity = item.Quantity, UnitPrice = GetEffectivePrice(item.ProductVariant) });
                     }
 
-                    // QUAN TRỌNG: Chỉ xóa giỏ hàng nếu là COD
-                    if (paymentMethod == "COD")
-                    {
-                        _context.Carts.RemoveRange(dbCarts);
-                    }
+                    if (paymentMethod == "COD") _context.Carts.RemoveRange(dbCarts);
 
                     await _context.SaveChangesAsync();
                     transaction.Commit();
 
-                    // 4. Điều hướng
-                    if (paymentMethod == "VNPay")
-                    {
-                        // Giỏ hàng vẫn còn, Kho chưa trừ -> Chuyển sang VNPay
-                        var vnpayUrl = CreateVnPayUrl(order.OrderId, totalAmount);
-                        return Redirect(vnpayUrl);
-                    }
-                    else
-                    {
-                        // COD: Đã trừ kho, đã xóa giỏ -> Xong
-                        TempData["SuccessMessage"] = "Đặt hàng thành công!";
-                        return RedirectToAction("OrderSuccess");
-                    }
+                    if (paymentMethod == "VNPay") return Redirect(CreateVnPayUrl(order.OrderId, totalAmount));
+
+                    TempData["SuccessMessage"] = "Đặt hàng thành công!";
+                    return RedirectToAction("OrderSuccess", new { id = order.OrderId });
                 }
                 catch (Exception ex)
                 {
                     transaction.Rollback();
-                    TempData["ErrorMessage"] = "Lỗi đặt hàng: " + ex.Message;
+                    TempData["ErrorMessage"] = "Lỗi: " + ex.Message;
                     return RedirectToAction("Checkout");
                 }
             }
         }
 
         // ==========================================================
-        // 7. PAYMENT CALLBACK (VNPAY) - XỬ LÝ KẾT QUẢ
+        // 7. PAYMENT CALLBACK (VNPAY)
         // ==========================================================
         [HttpGet]
         public async Task<IActionResult> PaymentCallback()
         {
-            var response = _configuration.GetSection("VnPay");
             if (Request.Query.Count == 0) return RedirectToAction("Index");
-
+            var response = _configuration.GetSection("VnPay");
             var vnpay = new VnPayLibrary();
-            foreach (var s in Request.Query)
-            {
-                if (!string.IsNullOrEmpty(s.Key) && s.Key.StartsWith("vnp_"))
-                {
-                    vnpay.AddResponseData(s.Key, s.Value);
-                }
-            }
+            foreach (var s in Request.Query) if (s.Key.StartsWith("vnp_")) vnpay.AddResponseData(s.Key, s.Value);
 
             long orderId = Convert.ToInt64(vnpay.GetResponseData("vnp_TxnRef"));
             string vnp_ResponseCode = vnpay.GetResponseData("vnp_ResponseCode");
             string vnp_SecureHash = Request.Query["vnp_SecureHash"];
 
-            bool checkSignature = vnpay.ValidateSignature(vnp_SecureHash, response["HashSecret"]);
-
-            if (checkSignature)
+            if (vnpay.ValidateSignature(vnp_SecureHash, response["HashSecret"]))
             {
-                // Load đơn hàng tạm
-                var order = await _context.Orders
-                    .Include(o => o.OrderDetails)
-                    .FirstOrDefaultAsync(o => o.OrderId == orderId);
-
+                var order = await _context.Orders.Include(o => o.OrderDetails).FirstOrDefaultAsync(o => o.OrderId == orderId);
                 if (order == null) return RedirectToAction("Index");
 
-                // CHỈ KHI LÀ "00" MỚI COI LÀ THÀNH CÔNG
                 if (vnp_ResponseCode == "00")
                 {
-                    // === THÀNH CÔNG: LƯU ĐƠN, TRỪ KHO, XÓA GIỎ ===
                     if (order.Status == "Pending Payment")
                     {
-                        order.Status = "Paid"; // Đã thanh toán
-
-                        // 1. Trừ kho (Lúc này mới trừ)
+                        order.Status = "Paid";
                         foreach (var detail in order.OrderDetails)
                         {
                             var variant = await _context.ProductVariants.FindAsync(detail.VariantId);
-                            if (variant != null)
-                            {
-                                // SỬA LỖI: Bỏ "?? 0"
-                                int stock = variant.StockQuantity;
-                                if (stock >= detail.Quantity)
-                                    variant.StockQuantity = stock - detail.Quantity;
-                                else
-                                    variant.StockQuantity = 0; // Hết hàng
-                            }
+                            if (variant != null) variant.StockQuantity = Math.Max(0, variant.StockQuantity - detail.Quantity);
                         }
-
-                        // 2. Xóa giỏ hàng của User
-                        int? userId = order.UserId;
-                        if (userId != null)
-                        {
-                            var userCarts = _context.Carts.Where(c => c.UserId == userId);
-                            _context.Carts.RemoveRange(userCarts);
-                        }
-
+                        var userCarts = _context.Carts.Where(c => c.UserId == order.UserId);
+                        _context.Carts.RemoveRange(userCarts);
                         await _context.SaveChangesAsync();
                     }
-                    TempData["SuccessMessage"] = "Thanh toán VNPay thành công!";
-                    return RedirectToAction("OrderSuccess");
+                    TempData["SuccessMessage"] = "Thanh toán thành công!";
+                    return RedirectToAction("OrderSuccess", new { id = order.OrderId });
                 }
                 else
                 {
-                    // === THẤT BẠI: XÓA SẠCH ĐƠN HÀNG TẠM ===
-                    // Giúp Database sạch sẽ, coi như khách chưa từng đặt
-
-                    // 1. Xóa chi tiết đơn hàng trước (Để tránh lỗi FK)
-                    if (order.OrderDetails != null && order.OrderDetails.Any())
-                    {
-                        _context.OrderDetails.RemoveRange(order.OrderDetails);
-                    }
-
-                    // 2. Xóa đơn hàng chính
+                    if (order.OrderDetails != null) _context.OrderDetails.RemoveRange(order.OrderDetails);
                     _context.Orders.Remove(order);
-
                     await _context.SaveChangesAsync();
-
-                    // Giỏ hàng vẫn còn nguyên (vì chưa xóa ở bước Checkout)
-                    TempData["ErrorMessage"] = "Giao dịch thanh toán đã bị hủy hoặc thất bại. Giỏ hàng của bạn vẫn còn nguyên.";
-                    return RedirectToAction("Index"); // Quay về trang giỏ hàng
+                    TempData["ErrorMessage"] = "Thanh toán thất bại.";
+                    return RedirectToAction("Index");
                 }
             }
-            else
-            {
-                TempData["ErrorMessage"] = "Lỗi bảo mật chữ ký số.";
-                return RedirectToAction("Index");
-            }
+            return RedirectToAction("Index");
         }
 
         // ==========================================================
-        // HELPER FUNCTIONS
+        // 8. TRANG SUCCESS (HIỂN THỊ CHI TIẾT)
         // ==========================================================
+        [Authorize]
+        public async Task<IActionResult> OrderSuccess(int id)
+        {
+            int userId = GetUserId();
+            var order = await _context.Orders
+                .Include(o => o.OrderDetails).ThenInclude(od => od.Variant).ThenInclude(pv => pv.Product)
+                .FirstOrDefaultAsync(o => o.OrderId == id && o.UserId == userId);
+            if (order == null) return RedirectToAction("Index", "Home");
+            return View(order);
+        }
 
+        // ==========================================================
+        // 9. XUẤT EXCEL
+        // ==========================================================
+        [Authorize]
+        public async Task<IActionResult> ExportOrderToExcel(int id)
+        {
+            int userId = GetUserId();
+            var order = await _context.Orders.Include(o => o.OrderDetails).ThenInclude(od => od.Variant).ThenInclude(pv => pv.Product).FirstOrDefaultAsync(o => o.OrderId == id && o.UserId == userId);
+            if (order == null) return NotFound();
+
+            using (var workbook = new XLWorkbook())
+            {
+                var worksheet = workbook.Worksheets.Add("DonHang_" + order.OrderId);
+                worksheet.Cell(1, 1).Value = "CHI TIẾT ĐƠN HÀNG #" + order.OrderId;
+                worksheet.Range(1, 1, 1, 6).Merge().Style.Font.SetBold().Font.SetFontSize(16).Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+                worksheet.Cell(3, 1).Value = "Khách hàng:"; worksheet.Cell(3, 2).Value = order.CustomerName;
+                worksheet.Cell(4, 1).Value = "SĐT:"; worksheet.Cell(4, 2).Value = "'" + order.CustomerPhone;
+                worksheet.Cell(5, 1).Value = "Địa chỉ:"; worksheet.Cell(5, 2).Value = order.ShippingAddress;
+                worksheet.Cell(6, 1).Value = "Ngày đặt:"; worksheet.Cell(6, 2).Value = order.OrderDate;
+
+                int row = 8;
+                string[] headers = { "STT", "Tên SP", "Phân loại", "SL", "Đơn giá", "Thành tiền" };
+                for (int i = 0; i < headers.Length; i++)
+                {
+                    worksheet.Cell(row, i + 1).Value = headers[i];
+                    worksheet.Cell(row, i + 1).Style.Fill.SetBackgroundColor(XLColor.FromHtml("#f7e6e9")).Font.SetBold().Border.SetOutsideBorder(XLBorderStyleValues.Thin);
+                }
+
+                row++; int stt = 1;
+                foreach (var item in order.OrderDetails)
+                {
+                    worksheet.Cell(row, 1).Value = stt++;
+                    worksheet.Cell(row, 2).Value = item.Variant?.Product?.ProductName;
+                    worksheet.Cell(row, 3).Value = item.Variant?.VariantName;
+                    worksheet.Cell(row, 4).Value = item.Quantity;
+                    worksheet.Cell(row, 5).Value = item.UnitPrice;
+                    worksheet.Cell(row, 6).Value = item.Quantity * item.UnitPrice;
+                    worksheet.Cell(row, 5).Style.NumberFormat.Format = "#,##0";
+                    worksheet.Cell(row, 6).Style.NumberFormat.Format = "#,##0";
+                    row++;
+                }
+
+                worksheet.Cell(row, 5).Value = "TỔNG CỘNG:";
+                worksheet.Cell(row, 5).Style.Font.SetBold();
+                worksheet.Cell(row, 6).Value = order.TotalAmount;
+                worksheet.Cell(row, 6).Style.Font.SetBold().Font.SetFontColor(XLColor.FromHtml("#d14d5a")).NumberFormat.Format = "#,##0";
+                worksheet.Columns().AdjustToContents();
+
+                using (var stream = new MemoryStream())
+                {
+                    workbook.SaveAs(stream);
+                    return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"DonHang_{order.OrderId}.xlsx");
+                }
+            }
+        }
+
+        // HELPERS
         private string CreateVnPayUrl(int orderId, decimal amount)
         {
-            // URL chuẩn cho port 50587
+            // LƯU Ý: Đổi port 50587 thành port thực tế của bạn nếu cần
             string vnp_Returnurl = "https://localhost:50587/Cart/PaymentCallback";
-
             string vnp_Url = _configuration["VnPay:BaseUrl"];
             string vnp_TmnCode = _configuration["VnPay:TmnCode"];
             string vnp_HashSecret = _configuration["VnPay:HashSecret"];
@@ -539,7 +425,6 @@ namespace CosmeticStore.MVC.Controllers
             vnpay.AddRequestData("vnp_OrderType", "other");
             vnpay.AddRequestData("vnp_ReturnUrl", vnp_Returnurl);
             vnpay.AddRequestData("vnp_TxnRef", orderId.ToString());
-
             return vnpay.CreateRequestUrl(vnp_Url, vnp_HashSecret);
         }
 
@@ -553,11 +438,6 @@ namespace CosmeticStore.MVC.Controllers
         {
             if (variant == null) return 0;
             return variant.SalePrice > 0 ? (decimal)variant.SalePrice : variant.Price;
-        }
-
-        public IActionResult OrderSuccess()
-        {
-            return View();
         }
     }
 }

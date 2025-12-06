@@ -1,117 +1,351 @@
-﻿@{
+﻿@model CosmeticStore.MVC.Models.Order
+
+@{
     ViewData["Title"] = "Đặt hàng thành công";
 
-    // Định nghĩa tông màu mới
-    string brandRed = "#d14d5a";    // Đỏ San Hô đậm (Coral Red)
-    string lightPink = "#f7e6e9";  // Hồng Nhạt (Light Pink)
+    // --- CẤU HÌNH MÀU SẮC THƯƠNG HIỆU ---
+    string brandColor = "#d14d5a";      // Đỏ San Hô
+    string brandLight = "#fff5f6";      // Nền hồng rất nhạt
+    string brandBorder = "#fad1d6";     // Viền hồng nhạt
 }
 
 <style>
-    /* ------------------------------------------------------------------ */
-    /* CSS TÙY CHỈNH THEO TÔNG ĐỎ SAN HÔ */
-    /* ------------------------------------------------------------------ */
-
-    /* Màu tùy chỉnh chung */
-    .text-custom-primary {
-        color: @brandRed !important;
+    /* --- CUSTOM STYLES --- */
+    :root {
+        --brand-color: @brandColor;
+        --brand-light: @brandLight;
+        --brand-border: @brandBorder;
     }
 
-    .bg-custom-light {
-        background-color: @lightPink !important;
+    body {
+        background-color: #f8f9fa; /* Nền xám nhẹ cho toàn trang để nổi bật hóa đơn trắng */
     }
 
-    .btn-primary-custom {
-        background-color: @brandRed !important;
-        border-color: @brandRed !important;
+    /* 1. ANIMATION & ICON */
+    .success-container {
+        text-align: center;
+        margin-bottom: 40px;
+        animation: fadeInDown 0.8s ease-out;
+    }
+
+    .icon-box {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 100px;
+        height: 100px;
+        background-color: var(--brand-light);
+        color: var(--brand-color);
+        border-radius: 50%;
+        margin-bottom: 20px;
+        box-shadow: 0 10px 20px rgba(209, 77, 90, 0.15);
+    }
+
+    .success-icon {
+        font-size: 3.5rem;
+    }
+
+    /* 2. BUTTONS - CHUYÊN NGHIỆP HƠN */
+    .btn-action {
+        padding: 12px 25px;
+        font-weight: 600;
+        border-radius: 50px; /* Bo tròn hoàn toàn */
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+
+    .btn-brand {
+        background-color: var(--brand-color);
+        border: 2px solid var(--brand-color);
         color: white;
     }
 
-        .btn-primary-custom:hover {
-            background-color: #b03d47 !important;
-            border-color: #b03d47 !important;
+        .btn-brand:hover {
+            background-color: #b03d47;
+            border-color: #b03d47;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px rgba(209, 77, 90, 0.3);
         }
 
-    .btn-outline-custom-primary {
-        color: @brandRed !important;
-        border-color: @brandRed !important;
+    .btn-outline-brand {
+        background-color: white;
+        border: 2px solid var(--brand-color);
+        color: var(--brand-color);
     }
 
-        .btn-outline-custom-primary:hover {
-            background-color: @brandRed !important;
-            color: white !important;
+        .btn-outline-brand:hover {
+            background-color: var(--brand-color);
+            color: white;
+            transform: translateY(-2px);
         }
 
-    /* Card chính */
-    .card.shadow-sm {
-        background-color: @lightPink !important; /* Nền card màu Hồng Nhạt */
-        border: none;
-        box-shadow: 0 0 20px rgba(0,0,0,0.08) !important;
+    /* 3. INVOICE CARD (PHẦN CHỤP ẢNH) */
+    .invoice-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 15px 35px rgba(0,0,0,0.08); /* Đổ bóng sâu tạo chiều nổi */
+        overflow: hidden;
+        position: relative;
+        border: 1px solid #eaeaea;
     }
 
-    /* Biểu tượng thành công */
-    .mb-4 .fa-check-circle {
-        color: @brandRed !important; /* Màu Đỏ San Hô cho biểu tượng */
+    /* Dải màu trang trí trên đầu hóa đơn */
+    .invoice-top-strip {
+        height: 8px;
+        background: linear-gradient(90deg, var(--brand-color), #ff9a9e);
+        width: 100%;
     }
 
-    /* Tiêu đề */
-    h1.fw-bold {
-        color: @brandRed; /* Màu Đỏ San Hô cho tiêu đề */
+    .invoice-header {
+        padding: 30px 40px;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: #fff;
     }
 
-    /* Nút bấm */
-    .btn {
-        border-radius: 0.3rem;
+    .invoice-brand {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: var(--brand-color);
+        letter-spacing: 1px;
+        text-transform: uppercase;
+    }
+
+    .invoice-body {
+        padding: 40px;
+    }
+
+    /* Info Box */
+    .info-group {
+        margin-bottom: 25px;
+    }
+
+    .info-label {
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        color: #888;
+        letter-spacing: 0.5px;
+        margin-bottom: 5px;
         font-weight: 600;
     }
+
+    .info-value {
+        font-size: 1rem;
+        color: #333;
+        font-weight: 500;
+    }
+
+    /* Table Design */
+    .table-invoice {
+        width: 100%;
+        margin-top: 20px;
+    }
+
+        .table-invoice thead th {
+            background-color: var(--brand-light);
+            color: var(--brand-color);
+            border: none;
+            padding: 12px 15px;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+        }
+
+        .table-invoice tbody td {
+            padding: 15px;
+            border-bottom: 1px dashed #eee; /* Đường kẻ đứt nét tinh tế */
+            vertical-align: middle;
+        }
+
+        .table-invoice tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+    .product-thumb {
+        width: 50px;
+        height: 50px;
+        object-fit: cover;
+        border-radius: 6px;
+        border: 1px solid #eee;
+        margin-right: 12px;
+    }
+
+    /* Footer Tổng tiền */
+    .invoice-footer {
+        background-color: var(--brand-light);
+        padding: 20px 40px;
+        border-top: 1px solid var(--brand-border);
+    }
+
+    .total-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 1.25rem;
+    }
+
 </style>
 
-<div class="container py-5 text-center">
-    <div class="card shadow-sm border-0 p-5 mx-auto" style="max-width: 600px;">
-        <div class="mb-4">
-            @* Loại bỏ text-success để dùng CSS tùy chỉnh *@
-            <i class="fa fa-check-circle" style="font-size: 80px;"></i>
+<div class="container py-5">
+
+    <div class="success-container">
+        <div class="icon-box">
+            <i class="fa fa-check success-icon"></i>
         </div>
+        <h2 class="fw-bold" style="color: #333;">Cảm ơn bạn đã đặt hàng!</h2>
+        <p class="text-muted fs-5">Đơn hàng của bạn đã được tiếp nhận và đang xử lý.</p>
+    </div>
 
-        <h1 class="fw-bold text-uppercase mb-3">Đặt hàng thành công!</h1>
+    <div class="d-flex justify-content-center gap-3 mb-5 flex-wrap">
+        <a asp-action="ExportOrderToExcel" asp-route-id="@Model.OrderId" class="btn btn-brand btn-action">
+            <i class="fa fa-file-excel-o"></i> Xuất Excel
+        </a>
 
-        <p class="lead text-muted">
-            Cảm ơn bạn đã mua sắm tại <strong>Cosmetic Store</strong>.
-        </p>
-        <p class="text-muted mb-4">
-            Đơn hàng của bạn đang được xử lý. Chúng tôi sẽ liên hệ xác nhận sớm nhất.
-            <br />
-            Bạn sẽ được chuyển hướng về trang chủ sau <span id="countdown">5</span> giây.
-        </p>
+        <button id="btnCapture" class="btn btn-outline-brand btn-action">
+            <i class="fa fa-camera"></i> Lưu ảnh hóa đơn
+        </button>
 
-        <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
-            <a asp-controller="Account" asp-action="MyOrders" class="btn btn-outline-custom-primary px-4">
-                @* Thay btn-outline-primary bằng btn-outline-custom-primary *@
-                Xem đơn hàng của tôi
-            </a>
-            <a asp-controller="Products" asp-action="Index" class="btn btn-primary-custom px-4">
-                @* Thay btn-success bằng btn-primary-custom *@
-                Tiếp tục mua sắm
-            </a>
+        <a asp-controller="Products" asp-action="Index" class="btn btn-secondary btn-action" style="border-radius: 50px; background-color: #6c757d; border: none;">
+            Tiếp tục mua sắm
+        </a>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8" id="order-capture-area">
+            <div class="invoice-card">
+                <div class="invoice-top-strip"></div>
+
+                <div class="invoice-header">
+                    <div>
+                        <div class="invoice-brand">COSMETIC STORE</div>
+                        <div class="text-muted small mt-1">Hóa đơn điện tử</div>
+                    </div>
+                    <div class="text-end">
+                        <h5 class="fw-bold mb-0">#@Model.OrderId</h5>
+                        <div class="text-muted small">@Model.OrderDate?.ToString("dd/MM/yyyy HH:mm")</div>
+                    </div>
+                </div>
+
+                <div class="invoice-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="info-group">
+                                <div class="info-label">Khách hàng</div>
+                                <div class="info-value">@Model.CustomerName</div>
+                                <div class="text-muted small">@Model.CustomerPhone</div>
+                            </div>
+                        </div>
+                        <div class="col-6 text-end">
+                            <div class="info-group">
+                                <div class="info-label">Giao tới</div>
+                                <div class="info-value">@Model.ShippingAddress</div>
+                            </div>
+                            <div class="info-group">
+                                <div class="info-label">Thanh toán</div>
+                                @if (Model.Status == "Paid")
+                                {
+                                    <span class="badge bg-success" style="font-weight: 500; padding: 6px 10px;">Đã thanh toán (VNPay)</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-warning text-dark" style="font-weight: 500; padding: 6px 10px;">@Model.Status (COD)</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-invoice">
+                            <thead>
+                                <tr>
+                                    <th>Sản phẩm</th>
+                                    <th class="text-center">SL</th>
+                                    <th class="text-end">Đơn giá</th>
+                                    <th class="text-end">Thành tiền</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model.OrderDetails)
+                                {
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                @if (!string.IsNullOrEmpty(item.Variant?.Product?.MainImageUrl))
+                                                {
+                                                    <img src="@item.Variant.Product.MainImageUrl" class="product-thumb" alt="Product">
+                                                }
+                                                <div>
+                                                    <div class="fw-bold text-dark">@item.Variant?.Product?.ProductName</div>
+                                                    <div class="small text-muted">@item.Variant?.VariantName</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="text-center fw-bold text-secondary">x @item.Quantity</td>
+                                        <td class="text-end text-muted">@string.Format("{0:N0}", item.UnitPrice)</td>
+                                        <td class="text-end fw-bold text-dark">@string.Format("{0:N0}", item.Quantity * item.UnitPrice)</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="invoice-footer">
+                    <div class="total-row">
+                        <span class="fw-bold text-secondary">TỔNG CỘNG</span>
+                        <span class="fw-bold" style="color: var(--brand-color); font-size: 1.5rem;">
+                            @string.Format("{0:N0} đ", Model.TotalAmount)
+                        </span>
+                    </div>
+                    <div class="text-center mt-3 pt-3 small text-muted" style="border-top: 1px solid #e5e5e5;">
+                        Cảm ơn quý khách đã tin tưởng lựa chọn Cosmetic Store! <br>
+                        Mọi thắc mắc vui lòng liên hệ hotline: 1900 xxxx
+                    </div>
+                </div>
+
+            </div>
         </div>
     </div>
 </div>
 
 @section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            let countdownElement = document.getElementById('countdown');
-            let countdown = 5;
+                document.getElementById("btnCapture").addEventListener("click", function() {
+                    var element = document.getElementById("order-capture-area");
+                    var btn = this;
+                    var originalHtml = btn.innerHTML;
 
-            function updateCountdown() {
-                countdownElement.textContent = countdown;
-                if (countdown === 0) {
-                    window.location.href = "@Url.Action("Index", "Home")"; // Chuyển hướng về trang chủ
-                } else {
-                    countdown--;
-                    setTimeout(updateCountdown, 1000);
-                }
-            }
-            updateCountdown();
-        });
+                    // Loading state
+                    btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Đang xử lý...';
+                    btn.disabled = true;
+
+                    html2canvas(element, {
+                        scale: 2, // Tăng độ phân giải lên gấp đôi để ảnh sắc nét
+                        useCORS: true, // Hỗ trợ tải ảnh từ nguồn khác (nếu ảnh sản phẩm lưu ở server khác)
+                        backgroundColor: "#f8f9fa", // Màu nền khớp với body
+                        logging: false
+                    }).then(canvas => {
+                        var link = document.createElement('a');
+        link.download = 'HoaDon_CosmeticStore_@Model.OrderId' + '.png';
+                        link.href = canvas.toDataURL("image/png");
+                        link.click();
+
+                        // Reset button
+                        btn.innerHTML = originalHtml;
+                        btn.disabled = false;
+                    }).catch(err => {
+                        console.error("Lỗi:", err);
+                        alert("Có lỗi khi tạo ảnh.");
+                        btn.innerHTML = originalHtml;
+                        btn.disabled = false;
+                    });
+                });
     </script>
 }

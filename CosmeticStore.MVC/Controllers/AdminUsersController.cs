@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 
 namespace CosmeticStore.MVC.Controllers
 {
-    // Chỉ Admin mới được truy cập Controller này
     [Authorize(Roles = "Admin")]
     public class AdminUsersController : Controller
     {
@@ -19,9 +18,6 @@ namespace CosmeticStore.MVC.Controllers
             _context = context;
         }
 
-        // ==========================================
-        // 1. INDEX: Tìm kiếm + Lọc trạng thái + Sắp xếp VIP
-        // ==========================================
         public async Task<IActionResult> Index(string searchString, string statusFilter)
         {
             // Lưu lại giá trị bộ lọc để hiển thị trên View
@@ -66,9 +62,6 @@ namespace CosmeticStore.MVC.Controllers
             return View(users);
         }
 
-        // ==========================================
-        // 2. TOGGLE LOCK: Khóa / Mở khóa nhanh
-        // ==========================================
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ToggleLock(int id)
@@ -83,9 +76,6 @@ namespace CosmeticStore.MVC.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        // ==========================================
-        // 3. DETAILS: Xem chi tiết
-        // ==========================================
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null) return NotFound();
@@ -99,9 +89,6 @@ namespace CosmeticStore.MVC.Controllers
             return View(user);
         }
 
-        // ==========================================
-        // 4. CREATE: Tạo mới
-        // ==========================================
         public IActionResult Create() => View();
 
         [HttpPost]
@@ -140,9 +127,6 @@ namespace CosmeticStore.MVC.Controllers
             return View(user);
         }
 
-        // ==========================================
-        // 5. EDIT: Sửa thông tin
-        // ==========================================
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null) return NotFound();
@@ -187,9 +171,6 @@ namespace CosmeticStore.MVC.Controllers
             return View(user);
         }
 
-        // ==========================================
-        // 6. DELETE: Xóa (Có kiểm tra ràng buộc)
-        // ==========================================
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null) return NotFound();

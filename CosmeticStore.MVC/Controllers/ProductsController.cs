@@ -9,7 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.IO;
-using Microsoft.AspNetCore.Hosting; // Cần thiết
+using Microsoft.AspNetCore.Hosting;
 
 namespace CosmeticStore.MVC.Controllers
 {
@@ -24,14 +24,16 @@ namespace CosmeticStore.MVC.Controllers
             _webHostEnvironment = webHostEnvironment;
         }
 
-        // GET: Products (Danh sách sản phẩm - đã có lọc và phân trang)
+        // GET: Products 
         public async Task<IActionResult> Index(
             string sortOrder,
             string currentFilter,
             string searchString,
             decimal? minPrice,
             decimal? maxPrice,
-            int? pageNumber)
+            int? pageNumber,
+            string category,
+            string brand)
         {
             ViewData["CurrentSort"] = sortOrder;
             ViewData["NameSortParm"] = String.IsNullOrEmpty(sortOrder) ? "name_desc" : "";
@@ -49,6 +51,11 @@ namespace CosmeticStore.MVC.Controllers
             ViewData["CurrentFilter"] = searchString;
             ViewData["MinPrice"] = minPrice; 
             ViewData["MaxPrice"] = maxPrice;
+            ViewData["CurrentCategory"] = category; 
+            ViewData["CurrentBrand"] = brand;
+
+            ViewBag.Categories = await _context.Categories.ToListAsync();
+            ViewBag.Brands = await _context.Brands.ToListAsync();
 
             var products = _context.Products
                 .Include(p => p.Brand)
@@ -72,6 +79,15 @@ namespace CosmeticStore.MVC.Controllers
             {
                 products = products.Where(p => p.ProductVariants.Any(v => (v.SalePrice ?? v.Price) <= maxPrice.Value));
             }
+            if (!String.IsNullOrEmpty(category))
+            {
+                products = products.Where(s => s.Category.CategoryName == category);
+            }
+
+            if (!String.IsNullOrEmpty(brand))
+            {
+                products = products.Where(s => s.Brand.BrandName == brand);
+            }
 
             // 3. Sắp xếp
             switch (sortOrder)
@@ -94,7 +110,7 @@ namespace CosmeticStore.MVC.Controllers
             return View(await PaginatedList<Product>.CreateAsync(products.AsNoTracking(), pageNumber ?? 1, pageSize));
         }
 
-        // GET: Products/Details/5 (Chi tiết sản phẩm)
+        // GET: Products/Details/5 
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null) return NotFound();
@@ -110,8 +126,6 @@ namespace CosmeticStore.MVC.Controllers
 
             return View(product);
         }
-
-        // --- ADMIN CRUD ACTIONS ---
 
         // GET: Products/Create
         [Authorize(Roles = "Admin")]
@@ -278,7 +292,6 @@ namespace CosmeticStore.MVC.Controllers
             return (_context.Products?.Any(e => e.ProductId == id)).GetValueOrDefault();
         }
 
-        // --- REVIEW ACTION ---
 
         // POST: Products/AddReview
         [HttpPost]

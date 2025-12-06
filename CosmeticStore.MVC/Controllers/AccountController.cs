@@ -29,9 +29,6 @@ namespace CosmeticStore.MVC.Controllers
             _emailService = new EmailService(configuration);
         }
 
-        // ============================================================
-        // 1. ĐĂNG KÝ
-        // ============================================================
         public IActionResult Register() => View();
 
         public IActionResult AccessDenied() => View();
@@ -45,7 +42,6 @@ namespace CosmeticStore.MVC.Controllers
                 return View(user);
             }
 
-            // Hash mật khẩu & Set quyền
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(user.PasswordHash);
             user.Role = "Customer";
             user.IsLocked = false; // Mặc định không khóa
@@ -109,9 +105,6 @@ namespace CosmeticStore.MVC.Controllers
             }
         }
 
-        // ============================================================
-        // 2. ĐĂNG NHẬP (ĐÃ CẬP NHẬT LOGIC KHÓA & SESSION)
-        // ============================================================
         public IActionResult Login(string returnUrl = "/")
         {
             ViewData["ReturnUrl"] = returnUrl;
@@ -130,7 +123,7 @@ namespace CosmeticStore.MVC.Controllers
                 return View();
             }
 
-            // 2. [MỚI] Kiểm tra tài khoản bị khóa
+            // 2. Kiểm tra tài khoản bị khóa
             if (user.IsLocked)
             {
                 ViewBag.Error = "Tài khoản của bạn đã bị khóa vi phạm chính sách. Vui lòng liên hệ Admin.";
@@ -197,9 +190,6 @@ namespace CosmeticStore.MVC.Controllers
             return Redirect(returnUrl);
         }
 
-        // ============================================================
-        // 3. ĐĂNG XUẤT
-        // ============================================================
         public async Task<IActionResult> Logout()
         {
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
@@ -207,9 +197,6 @@ namespace CosmeticStore.MVC.Controllers
             return RedirectToAction("Index", "Home");
         }
 
-        // ============================================================
-        // 4. QUÊN MẬT KHẨU
-        // ============================================================
         [HttpGet]
         public IActionResult ForgotPassword() => View();
 
@@ -293,9 +280,6 @@ namespace CosmeticStore.MVC.Controllers
             return View();
         }
 
-        // ============================================================
-        // 5. ĐỔI MẬT KHẨU & PROFILE
-        // ============================================================
         [Authorize]
         [HttpGet]
         public IActionResult ChangePassword() => View();
@@ -361,9 +345,6 @@ namespace CosmeticStore.MVC.Controllers
             return RedirectToAction("Profile");
         }
 
-        // ============================================================
-        // CÁC CHỨC NĂNG ĐƠN HÀNG & VNPAY (GIỮ NGUYÊN)
-        // ============================================================
 
         [Authorize]
         public async Task<IActionResult> MyOrders()

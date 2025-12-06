@@ -4,7 +4,7 @@ using CosmeticStore.MVC.Models;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Authorization; // Bắt buộc có để dùng [Authorize]
+using Microsoft.AspNetCore.Authorization;
 
 namespace CosmeticStore.MVC.Controllers
 {
@@ -20,18 +20,12 @@ namespace CosmeticStore.MVC.Controllers
             _context = context;
         }
 
-        // ==========================================
-        // 1. GIAO DIỆN CHÍNH
-        // ==========================================
         public IActionResult Index()
         {
             // Không cần check IsAdmin() nữa
             return View();
         }
 
-        // ==========================================
-        // 2. API: DOANH THU THEO NGÀY
-        // ==========================================
         [HttpGet]
         public async Task<IActionResult> GetDailyRevenue()
         {
@@ -53,10 +47,6 @@ namespace CosmeticStore.MVC.Controllers
 
             return Json(sortedData);
         }
-
-        // ==========================================
-        // 3. API: DOANH THU THEO THÁNG
-        // ==========================================
         [HttpGet]
         public async Task<IActionResult> GetMonthlyRevenue()
         {
@@ -78,9 +68,6 @@ namespace CosmeticStore.MVC.Controllers
             return Json(data);
         }
 
-        // ==========================================
-        // 4. API: DOANH THU THEO NĂM
-        // ==========================================
         [HttpGet]
         public async Task<IActionResult> GetYearlyRevenue()
         {
@@ -100,9 +87,6 @@ namespace CosmeticStore.MVC.Controllers
             return Json(data.OrderBy(x => x.Label));
         }
 
-        // ============================================================
-        // 5. API: LẤY CHI TIẾT ĐƠN HÀNG
-        // ============================================================
         [HttpGet]
         public async Task<IActionResult> GetReportDetails(string type, string timeValue)
         {
@@ -144,11 +128,6 @@ namespace CosmeticStore.MVC.Controllers
 
             return Json(result);
         }
-        // ... (Giữ nguyên các Action cũ: Index, GetDailyRevenue...)
-
-        // ============================================================
-        // [MỚI] TRANG CHI TIẾT: Hiển thị danh sách đơn hàng theo thời gian
-        // ============================================================
         public async Task<IActionResult> PeriodDetails(string type, string timeValue)
         {
             

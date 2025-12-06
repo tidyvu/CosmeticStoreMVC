@@ -7,8 +7,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-
-// Thư viện cần thiết để xử lý file và đường dẫn
 using Microsoft.AspNetCore.Http;
 using System.IO;
 
@@ -62,7 +60,6 @@ namespace CosmeticStore.MVC.Controllers
         // Bổ sung IFormFile? LogoFile để nhận file từ form
         public async Task<IActionResult> Create([Bind("BrandId,BrandName,LogoUrl")] Brand brand, IFormFile? LogoFile)
         {
-            // === LOGIC XỬ LÝ TẢI FILE LOGO ===
             if (LogoFile != null && LogoFile.Length > 0)
             {
                 // Tạo tên file duy nhất
@@ -83,9 +80,6 @@ namespace CosmeticStore.MVC.Controllers
                 // Cập nhật URL vào Model
                 brand.LogoUrl = "/images/brands/" + fileName;
             }
-            // === KẾT THÚC LOGIC TẢI FILE LOGO ===
-
-            // Xóa validation cho navigation properties nếu có (để tránh lỗi)
             ModelState.Remove("Products");
 
             if (ModelState.IsValid)
@@ -116,7 +110,6 @@ namespace CosmeticStore.MVC.Controllers
         // POST: Brands/Edit/5 (ĐÃ CẬP NHẬT LOGIC TẢI FILE)
         [HttpPost]
         [ValidateAntiForgeryToken]
-        // Bổ sung IFormFile? LogoFile để nhận file từ form
         public async Task<IActionResult> Edit(int id, [Bind("BrandId,BrandName,LogoUrl")] Brand brand, IFormFile? LogoFile)
         {
             if (id != brand.BrandId)
@@ -124,12 +117,10 @@ namespace CosmeticStore.MVC.Controllers
                 return NotFound();
             }
 
-            // Xóa validation cho navigation properties nếu có
             ModelState.Remove("Products");
 
             if (ModelState.IsValid)
             {
-                // === LOGIC XỬ LÝ TẢI FILE LOGO MỚI ===
                 if (LogoFile != null && LogoFile.Length > 0)
                 {
                     // 1. Tạo tên file duy nhất
@@ -151,7 +142,6 @@ namespace CosmeticStore.MVC.Controllers
                     // (Nếu không có file mới, LogoUrl sẽ giữ giá trị cũ được truyền từ input hidden trong View)
                     brand.LogoUrl = "/images/brands/" + fileName;
                 }
-                // === KẾT THÚC LOGIC TẢI FILE LOGO MỚI ===
 
                 try
                 {

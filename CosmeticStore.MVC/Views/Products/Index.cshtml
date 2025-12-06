@@ -5,18 +5,14 @@
     ViewData["Title"] = "Mua sắm";
     var categories = ViewBag.Categories as List<CosmeticStore.MVC.Models.Category>;
     var brands = ViewBag.Brands as List<CosmeticStore.MVC.Models.Brand>;
+    var currentCategory = ViewData["CurrentCategory"] as string;
+    var currentBrand = ViewData["CurrentBrand"] as string;
 
-    // Định nghĩa tông màu
-    string brandRed = "#d14d5a";    // Đỏ San Hô đậm
-    string lightPink = "#f7e6e9";   // Hồng Nhạt
+    string brandRed = "#d14d5a";   
+    string lightPink = "#f7e6e9";   
 }
 
 <style>
-    /* ------------------------------------------------------------------ */
-    /* CSS TÙY CHỈNH THEO TÔNG ĐỎ SAN HÔ */
-    /* ------------------------------------------------------------------ */
-
-    /* --- Nút và Màu sắc chung --- */
     .text-custom-primary {
         color: @brandRed !important;
     }
@@ -197,17 +193,20 @@
                     </a>
                     @if (categories != null)
                     {
-                        foreach (var c in categories)
+                        foreach (var cat in categories)
                         {
-                            <a asp-action="Index" asp-route-categoryId="@c.CategoryId"
-                               class="list-group-item list-group-item-action border-0 px-0 @(ViewBag.CurrentCategory == c.CategoryId ? "active-custom" : "")">
-                                <i class="fa fa-caret-right me-2"></i>@c.CategoryName
-                            </a>
+                            <li style="list-style-type:none" class="mb-2">
+                                <a style="color:black" asp-action="Index" asp-route-category="@cat.CategoryName"
+                                   class="d-flex justify-content-between align-items-center text-decoration-none sidebar-link @(currentCategory == cat.CategoryName ? "active" : "")">
+                                    <span>@cat.CategoryName</span>
+                                    <i class="bi bi-chevron-right small text-muted"></i>
+                                </a>
+                            </li>
                         }
                     }
                 </div>
             </div>
-
+            <hr class="text-muted my-4" />
             <div class="mb-4">
                 <h5 class="fw-bold text-uppercase mb-3 text-custom-primary" style="font-size: 1rem;">Thương hiệu</h5>
                 <div class="list-group list-group-flush">
@@ -218,10 +217,13 @@
                     {
                         foreach (var b in brands)
                         {
-                            <a asp-action="Index" asp-route-brandId="@b.BrandId"
-                               class="list-group-item list-group-item-action border-0 px-0 @(ViewBag.CurrentBrand == b.BrandId ? "active-custom" : "")">
-                                <i class="fa fa-caret-right me-2"></i>@b.BrandName
-                            </a>
+                            <li style="list-style-type:none" class=" mb-2">
+                                <a style="color:black" asp-action="Index" asp-route-brand="@b.BrandName"
+                                   class="d-flex align-items-center text-decoration-none sidebar-link @(currentBrand == b.BrandName ? "active" : "")">
+                                    <i></i>
+                                    @b.BrandName
+                                </a>
+                            </li>
                         }
                     }
                 </div>

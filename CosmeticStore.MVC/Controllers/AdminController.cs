@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using CosmeticStore.MVC.Models;
 using System;
-using System.Linq; // Đảm bảo có using System.Linq;
+using System.Linq;
 
 namespace CosmeticStore.MVC.Controllers
 {
@@ -35,9 +35,6 @@ namespace CosmeticStore.MVC.Controllers
             // 4. Tổng số khách hàng (giả sử có trường Role)
             ViewBag.TotalCustomers = await _context.Users.CountAsync(u => u.Role == "Customer");
 
-            // =================================================================
-            // 5. DỮ LIỆU CHO BIỂU ĐỒ DOANH THU (Sử dụng Client-side Evaluation)
-            // =================================================================
 
             // Bước quan trọng: Kéo dữ liệu cần thiết (Date và Amount) của các đơn hàng hợp lệ vào bộ nhớ
             // (EF Core chỉ dịch được Where và Select ở đây)
@@ -102,7 +99,6 @@ namespace CosmeticStore.MVC.Controllers
             ViewBag.YearlyRevenueData = yearlyRevenueQuery.Select(x => x.Total).ToList();
             ViewBag.YearlyLabels = yearlyRevenueQuery.Select(x => x.Year.ToString()).ToList();
 
-            // =================================================================
 
             // 6. Lấy 5 đơn hàng mới nhất để hiển thị nhanh
             var recentOrders = await _context.Orders

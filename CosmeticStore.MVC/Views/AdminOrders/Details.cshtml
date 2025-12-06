@@ -5,171 +5,251 @@
     Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
 }
 
-<div class="container py-5">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>Chi tiết đơn hàng #@Model.OrderId</h2>
-        <a asp-action="Index" class="btn btn-secondary">Quay lại danh sách</a>
+<div class="container-fluid py-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4 shadow-sm p-3 mb-5 bg-white rounded">
+        <div>
+            <h2 class="text-primary m-0 fw-bold">
+                <i class="fa fa-file-text-o me-2"></i>Đơn hàng #@Model.OrderId
+            </h2>
+            <small class="text-muted">Ngày đặt: @Model.OrderDate?.ToString("dd/MM/yyyy HH:mm")</small>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="javascript:void(0);" onclick="openPrintPage(@Model.OrderId)" class="btn btn-primary">
+                <i class="fa fa-print me-2"></i>In Phiếu
+            </a>
+            <a asp-action="ExportOrderToExcel" asp-route-id="@Model.OrderId" class="btn btn-success">
+                <i class="fa fa-file-excel-o me-2"></i>Xuất Excel
+            </a>
+            <a asp-action="Index" class="btn btn-secondary">
+                <i class="fa fa-arrow-left me-2"></i>Quay lại
+            </a>
+        </div>
     </div>
 
     <div class="row">
-        <div class="col-md-4">
-            <div class="card mb-4">
-                <div class="card-header bg-info text-white fw-bold">Thông tin khách hàng</div>
+        <div class="col-lg-4 col-md-5 mb-4">
+            <div class="card shadow-sm mb-4 border-0">
+                <div class="card-header bg-info text-white fw-bold">
+                    <i class="fa fa-user me-2"></i>Thông tin khách hàng
+                </div>
                 <div class="card-body">
-                    <p><strong>Họ tên:</strong> @Model.CustomerName</p>
-                    <p><strong>SĐT:</strong> @Model.CustomerPhone</p>
-                    <p><strong>Địa chỉ:</strong> @Model.ShippingAddress</p>
-                    <p><strong>Ngày đặt:</strong> @Model.OrderDate?.ToString("dd/MM/yyyy HH:mm")</p>
+                    <div class="mb-3">
+                        <label class="small text-muted text-uppercase fw-bold">Họ tên</label>
+                        <div class="fs-6 fw-bold">@Model.CustomerName</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="small text-muted text-uppercase fw-bold">Số điện thoại</label>
+                        <div><a href="tel:@Model.CustomerPhone" class="text-decoration-none fw-bold">@Model.CustomerPhone</a></div>
+                    </div>
+                    <div>
+                        <label class="small text-muted text-uppercase fw-bold">Địa chỉ giao hàng</label>
+                        <div>@Model.ShippingAddress</div>
+                    </div>
+                </div>
+            </div>
 
-                   
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-warning text-dark fw-bold">
+                    <i class="fa fa-cog me-2"></i>Quản lý trạng thái
+                </div>
+                <div class="card-body text-center">
 
-                    <hr />
-
-                    <div class="mb-3 text-center">
-                        <label class="form-label d-block text-muted small">Trạng thái đơn hàng</label>
+                    <div class="mb-4">
+                        <label class="text-muted small text-uppercase fw-bold mb-2 d-block">Hiện tại</label>
                         @if (Model.Status == "Pending")
                         {
-                            <span class="badge bg-warning text-dark fs-5 px-4 py-2">Chờ xử lý</span>
+                            <span class="badge bg-warning text-dark fs-6 px-4 py-2 border">Chờ xử lý</span>
                         }
-                        @if (Model.Status == "Paid")
+                        else if (Model.Status == "Paid")
                         {
-                            <span class="badge bg-warning text-dark fs-5 px-4 py-2">Đơn hàng đã thanh toán</span>
+
+                            <span class="badge bg-info text-dark fs-6 px-4 py-2">Đã thanh toán (VNPay)</span>
                         }
                         else if (Model.Status == "Processing")
                         {
-                            <span class="badge bg-info text-white fs-5 px-4 py-2">Đang đóng gói</span>
+
+                            <span class="badge bg-primary fs-6 px-4 py-2">Đang đóng gói</span>
                         }
                         else if (Model.Status == "Shipped")
                         {
-                            <span class="badge bg-primary fs-5 px-4 py-2">Đang giao hàng</span>
+
+                            <span class="badge bg-primary fs-6 px-4 py-2"><i class="fa fa-truck me-1"></i> Đang giao hàng</span>
                         }
                         else if (Model.Status == "Completed")
                         {
-                            <span class="badge bg-success fs-5 px-4 py-2">Hoàn thành</span>
+
+                            <span class="badge bg-success fs-6 px-4 py-2"><i class="fa fa-check me-1"></i> Hoàn thành</span>
                         }
                         else if (Model.Status == "Cancelled")
                         {
-                            <span class="badge bg-danger fs-5 px-4 py-2">Đã hủy</span>
+
+                            <span class="badge bg-danger fs-6 px-4 py-2"><i class="fa fa-times me-1"></i> Đã hủy</span>
                         }
                         else
                         {
-                            <span class="badge bg-secondary fs-5 px-4 py-2">@Model.Status</span>
+
+                            <span class="badge bg-secondary fs-6 px-4 py-2">@Model.Status</span>
                         }
                     </div>
 
                     <hr />
 
-                    <div class="mb-3 text-center">
-                        <label class="form-label fw-bold d-block">Hành động:</label>
-                        <div class="d-flex flex-column gap-2">
-                            @{
-                                string nextStatus = "";
-                                string nextStatusText = "";
-                                string nextStatusClass = "btn-primary";
-                            }
+                    <div class="d-grid gap-2">
+                        @{
+                            string nextStatus = "";
+                            string nextStatusText = "";
+                            string nextStatusClass = "btn-primary";
+                            string iconClass = "fa-arrow-right";
+                            bool autoPrint = false; // Cờ kiểm tra có cần in tự động không
+                        }
 
-                            @if (Model.Status == "Pending" || Model.Status == "Paid")
-                            {
-                                nextStatus = "Processing";
-                                nextStatusText = "Chuyển sang Đang đóng gói";
-                            }
-                            else if (Model.Status == "Processing")
-                            {
-                                nextStatus = "Shipped";
-                                nextStatusText = "Chuyển sang Đang giao hàng";
-                            }
-                            else if (Model.Status == "Shipped")
-                            {
-                                nextStatus = "Completed";
-                                nextStatusText = "Đánh dấu Hoàn thành";
-                                nextStatusClass = "btn-success";
-                            }
+                        @if (Model.Status == "Pending" || Model.Status == "Paid")
+                        {
+                            nextStatus = "Processing";
+                            nextStatusText = "Xác nhận & Đóng gói";
+                            iconClass = "fa-box-open";
+                            autoPrint = true; // Bật cờ in cho bước này
+                        }
+                        else if (Model.Status == "Processing")
+                        {
+                            nextStatus = "Shipped";
+                            nextStatusText = "Bắt đầu Giao hàng";
+                            iconClass = "fa-truck";
+                        }
+                        else if (Model.Status == "Shipped")
+                        {
+                            nextStatus = "Completed";
+                            nextStatusText = "Xác nhận Hoàn thành";
+                            nextStatusClass = "btn-success";
+                            iconClass = "fa-check";
+                        }
 
-                            @if (!string.IsNullOrEmpty(nextStatus))
-                            {
-                                <form asp-action="UpdateStatus" method="post" onsubmit="return confirm('Bạn có chắc muốn chuyển trạng thái đơn hàng sang @nextStatusText không?');">
-                                    <input type="hidden" name="id" value="@Model.OrderId" />
-                                    <input type="hidden" name="status" value="@nextStatus" />
-                                    <button type="submit" class="btn @nextStatusClass w-100 fw-bold py-2">
-                                        @nextStatusText
-                                    </button>
-                                </form>
-                            }
+                        @if (!string.IsNullOrEmpty(nextStatus))
+                        {
+                            <form asp-action="UpdateStatus" method="post"
+                                  onsubmit="return handleSubmit(this, '@nextStatusText', @(autoPrint ? "true" : "false"), @Model.OrderId);">
 
-                            @if (Model.Status != "Completed" && Model.Status != "Cancelled")
+                                <input type="hidden" name="id" value="@Model.OrderId" />
+                                <input type="hidden" name="status" value="@nextStatus" />
+
+                                <button type="submit" class="btn @nextStatusClass w-100 py-2 fw-bold shadow-sm">
+                                    <i class="fa @iconClass me-2"></i>@nextStatusText
+                                </button>
+                            </form>
+
+                            if (autoPrint)
                             {
-                                <hr class="my-1" />
-                                <form asp-action="UpdateStatus" method="post" onsubmit="return confirm('CẢNH BÁO: Việc hủy đơn sẽ hoàn lại số lượng sản phẩm vào kho. Bạn có chắc chắn muốn HỦY ĐƠN HÀNG này không?');">
+                                <small class="text-muted mt-1 d-block">
+                                    * Hệ thống sẽ tự động mở phiếu in khi xác nhận.
+                                </small>
+                            }
+                        }
+
+                        @if (Model.Status != "Completed" && Model.Status != "Cancelled")
+                        {
+                            <div class="mt-2">
+                                <form asp-action="UpdateStatus" method="post" onsubmit="return confirm('CẢNH BÁO: Hủy đơn sẽ hoàn lại kho. Bạn chắc chắn muốn HỦY?');">
                                     <input type="hidden" name="id" value="@Model.OrderId" />
                                     <input type="hidden" name="status" value="Cancelled" />
-                                    <button type="submit" class="btn btn-outline-danger w-100 fw-bold py-2">
-                                        Hủy đơn & Hoàn kho
+                                    <button type="submit" class="btn btn-outline-danger w-100 py-2 fw-bold">
+                                        <i class="fa fa-times me-2"></i>Hủy đơn hàng
                                     </button>
                                 </form>
+                            </div>
+                        }
 
-                                <div class="form-text text-danger mt-2 small text-start">
-                                    Lưu ý: Thao tác này sẽ cập nhật lại số lượng tồn kho.
-                                </div>
-                            }
-                            else if (string.IsNullOrEmpty(nextStatus))
-                            {
-                                <div class="alert alert-light text-center border mt-2 py-3 small">
-                                    Đơn hàng đã @(Model.Status == "Completed" ? "Hoàn thành" : "bị Hủy"). Không thể cập nhật thêm.
-                                </div>
-                            }
-                        </div>
+                        @if (string.IsNullOrEmpty(nextStatus) && (Model.Status == "Completed" || Model.Status == "Cancelled"))
+                        {
+                            <div class="alert alert-light border text-muted small mb-0">
+                                <i class="fa fa-lock me-1"></i> Đơn hàng đã đóng.
+                            </div>
+                        }
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header bg-dark text-white fw-bold">Sản phẩm đã mua</div>
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Sản phẩm</th>
-                            <th>Đơn giá</th>
-                            <th>Số lượng</th>
-                            <th>Thành tiền</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var item in Model.OrderDetails)
-                        {
-                            var product = item.Variant?.Product;
-                            var variantName = item.Variant?.VariantName;
-
-                            <tr>
-                                <td>
-                                    <a asp-controller="Products" asp-action="Details" asp-route-id="@product?.ProductId"
-                                       class="d-flex align-items-center text-decoration-none text-dark">
-                                        <img src="@(product?.MainImageUrl ?? "https://via.placeholder.com/50")"
-                                             width="50" height="50" style="object-fit:cover" class="me-2 border rounded" />
-                                        <div>
-                                            <span class="fw-bold">@product?.ProductName</span>
-                                            <br />
-                                            <small class="text-muted">Phân loại: @variantName</small>
-                                        </div>
-                                    </a>
-                                </td>
-                                <td>@item.UnitPrice.ToString("#,##0") đ</td>
-                                <td>x @item.Quantity</td>
-                                <td class="fw-bold text-danger">
-                                    @((item.Quantity * item.UnitPrice).ToString("#,##0")) đ
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                    <tfoot class="bg-light">
-                        <tr>
-                            <td colspan="3" class="text-end fw-bold">TỔNG CỘNG:</td>
-                            <td class="fw-bold text-danger fs-5">@Model.TotalAmount.ToString("#,##0") đ</td>
-                        </tr>
-                    </tfoot>
-                </table>
+        <div class="col-lg-8 col-md-7">
+            <div class="card shadow-sm h-100 border-0">
+                <div class="card-header bg-dark text-white fw-bold d-flex justify-content-between align-items-center">
+                    <span><i class="fa fa-shopping-cart me-2"></i>Danh sách sản phẩm</span>
+                    <span class="badge bg-light text-dark">@Model.OrderDetails?.Count() sản phẩm</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 45%; padding-left: 20px;">Sản phẩm</th>
+                                    <th class="text-center">Đơn giá</th>
+                                    <th class="text-center">Số lượng</th>
+                                    <th class="text-end pe-4">Thành tiền</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (Model.OrderDetails != null && Model.OrderDetails.Any())
+                                {
+                                    foreach (var item in Model.OrderDetails)
+                                    {
+                                        var product = item.Variant?.Product;
+                                        var imgUrl = product?.MainImageUrl ?? "https://via.placeholder.com/60?text=No+Image";
+                                        <tr>
+                                            <td style="padding-left: 20px;">
+                                                <div class="d-flex align-items-center">
+                                                    <img src="@imgUrl" class="rounded border me-3" style="width: 50px; height: 50px; object-fit: cover;" />
+                                                    <div>
+                                                        <span class="fw-bold text-dark">@product?.ProductName</span>
+                                                        <div class="text-muted small">Phân loại: @item.Variant?.VariantName</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="text-center">@item.UnitPrice.ToString("#,##0") đ</td>
+                                            <td class="text-center"><span class="badge bg-white text-dark border">x @item.Quantity</span></td>
+                                            <td class="text-end pe-4 fw-bold text-primary">@((item.Quantity * item.UnitPrice).ToString("#,##0")) đ</td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                            <tfoot class="bg-light border-top">
+                                <tr>
+                                    <td colspan="3" class="text-end py-3 fw-bold fs-5">TỔNG CỘNG:</td>
+                                    <td class="text-end py-3 pe-4 fw-bold text-danger fs-3">@Model.TotalAmount.ToString("#,##0") đ</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        // 1. Hàm mở trang in (dùng cho nút thủ công)
+                function openPrintPage(orderId) {
+                    var url = '/AdminOrders/PrintInvoice/' + orderId;
+                    window.open(url, '_blank');
+                }
+
+                // 2. Hàm xử lý submit form
+                // Parameters: form object, text thông báo, có in hay không, mã đơn hàng
+                function handleSubmit(form, actionText, shouldPrint, orderId) {
+                    // Bước 1: Hỏi xác nhận
+                    if (confirm('Bạn có chắc chắn muốn: ' + actionText + '?')) {
+
+                        // Bước 2: Nếu là bước Xác nhận & Đóng gói (shouldPrint = true) -> Mở tab in
+                        if (shouldPrint) {
+                            openPrintPage(orderId);
+                        }
+
+                        // Bước 3: Cho phép form submit về server để update database
+                        return true;
+                    }
+
+                    // Nếu bấm Cancel thì không làm gì cả
+                    return false;
+                }
+    </script>
+}
